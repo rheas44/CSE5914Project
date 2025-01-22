@@ -1,10 +1,19 @@
 import { Box, Flex, Heading, Button, Text, Link, Image } from '@chakra-ui/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import reactLogo from './assets/react.svg';
 import viteLogo from '/vite.svg';
 
 function App() {
   const [count, setCount] = useState(0);
+  const [message, setMessage] = useState(''); // State for backend message
+
+  // Fetch message from backend
+  useEffect(() => {
+    fetch('/api/hello') // Proxy will route this to backend during development
+      .then((response) => response.json())
+      .then((data) => setMessage(data.message))
+      .catch((error) => console.error('Error fetching API:', error));
+  }, []);
 
   return (
     <Box bg="gray.50" minH="100vh" p={4}>
@@ -55,6 +64,11 @@ function App() {
         <Text mt={4} color="gray.500">
           Button clicked <strong>{count}</strong> times
         </Text>
+
+        {/* Display message from backend */}
+        <Text mt={6} color="teal.500" fontSize="lg">
+          {message ? `Message from backend: "${message}"` : 'Loading backend message...'}
+        </Text>
       </Flex>
 
       {/* Logos Section */}
@@ -68,11 +82,11 @@ function App() {
       </Flex>
 
       {/* Footer Section */}
-      <Box as='footer' mt={12} py={4} bg="gray.200" textAlign="center">
+      <Box as="footer" mt={12} py={4} bg="gray.200" textAlign="center">
         <Text color="gray.600">© 2025 Elastic Eats. All rights reserved.</Text>
       </Box>
     </Box>
-  )
+  );
 }
 
 export default App;
