@@ -2,7 +2,7 @@ from elasticsearch import Elasticsearch
 import os
 
 # Get Elasticsearch host from environment variables
-elasticsearch_host = os.getenv("ELASTICSEARCH_HOST", "http://localhost:9200")
+elasticsearch_host = os.getenv("ELASTICSEARCH_HOST", "http://elasticsearch:9200")
 
 # Connect to Elasticsearch
 try:
