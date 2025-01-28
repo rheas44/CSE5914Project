@@ -24,6 +24,8 @@ services:
     volumes:
       - .:/app
     depends_on:
+      # elasticsearch:
+      #   condition: service_healthy
       - elasticsearch
     networks:
       - app-network
@@ -41,6 +43,15 @@ services:
       - es_data:/usr/share/elasticsearch/data
     networks:
       - app-network
+    # healthcheck:
+    #   test:
+    #     [
+    #       "CMD-SHELL",
+    #       "curl -s --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'",
+    #     ]
+    #   interval: 10s
+    #   timeout: 10s
+    #   retries: 120
 
   kibana:
     image: docker.elastic.co/kibana/kibana:8.9.0
