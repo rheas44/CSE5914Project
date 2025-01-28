@@ -4,7 +4,7 @@ Elastic Eats is a recipe generator that leverages Elasticsearch to search and ge
 
 ## Project Structure
 
-- **Client**: React frontend (Vite-based)
+- **elastic-eats-ui**: React frontend (Vite-based)
 - **Server**: Express backend
 
 ## Prerequisites
@@ -20,8 +20,8 @@ Important: The frontend (React) and backend (Express) must be run in separate te
 
 ### Frontend (React)
 
-1. Navigate to the `client` directory:
-   ```cd client```
+1. Navigate to the `elastic-eats-ui` directory:
+   ```cd elastic-eats-ui```
 2. Install dependencies:
    ```npm install```
 3. Start the development server:
