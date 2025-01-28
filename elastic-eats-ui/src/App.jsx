@@ -1,49 +1,62 @@
-import { Box, Flex, Heading, Button, Text, Link, Image } from '@chakra-ui/react'
-import { useState } from 'react'
-import Recipe from './components/recipe'
-import LandingHeader from './components/landing-header'
-import LandingFooter from './components/landing-footer'
-
-const mockRecipe = {
-  title: "Grilled Chicken Salad",
-  ingredients: [
-    "2 cups mixed greens",
-    "1/2 cup cherry tomatoes",
-    "1/4 cup sliced cucumber",
-    "1/4 cup crumbled feta cheese",
-    "1 grilled chicken breast, sliced",
-    "2 tbsp balsamic vinaigrette",
-  ],
-  macros: {
-    protein: "35g",
-    fat: "12g",
-    carbs: "15g",
-    fiber: "4g",
-    sodium: "450mg",
-  },
-  instructions: [
-    "Wash and prepare the vegetables.",
-    "Grill the chicken breast until fully cooked.",
-    "Slice the chicken into thin strips.",
-    "Combine greens, tomatoes, cucumber, and feta cheese in a large bowl.",
-    "Top the salad with the grilled chicken slices.",
-    "Drizzle balsamic vinaigrette over the salad and serve.",
-  ],
-}
+import { Box, Spinner, Text } from "@chakra-ui/react";
+import { useState, useEffect } from "react";
+import Recipe from "./components/recipe"; // Handles rendering recipes
+import LandingHeader from "./components/landing-header";
+import LandingFooter from "./components/landing-footer";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [recipes, setRecipes] = useState([]); // State to store the fetched recipes
+  const [isLoading, setIsLoading] = useState(true); // Loading state
+  const [error, setError] = useState(null); // Error state
+
+  // Fetch recipes from the API
+  useEffect(() => {
+    const fetchRecipes = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/recipes"); // Adjust API URL if needed
+        if (!response.ok) {
+          throw new Error("Failed to fetch recipes");
+        }
+        const data = await response.json();
+        setRecipes(data); // Assuming the API returns an array of recipes
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchRecipes();
+  }, []);
 
   return (
     <Box bg="primary.light" minH="100vh" fontFamily="body">
-
+      {/* Landing Header */}
       <LandingHeader />
 
-      <Recipe recipe={mockRecipe} />
+      {/* Main Content */}
+      <Box p="4">
+        {isLoading ? (
+          // Show a spinner while loading
+          <Box textAlign="center" mt="10">
+            <Spinner size="xl" color="teal.500" />
+            <Text mt="4">Loading recipes...</Text>
+          </Box>
+        ) : error ? (
+          // Show error message if fetching fails
+          <Box textAlign="center" mt="10" color="red.500">
+            <Text>{error}</Text>
+          </Box>
+        ) : (
+          // Render the Recipe component with the fetched recipes
+          <Recipe recipes={recipes} />
+        )}
+      </Box>
 
+      {/* Landing Footer */}
       <LandingFooter />
     </Box>
-  )
+  );
 }
 
-export default App
+export default App;

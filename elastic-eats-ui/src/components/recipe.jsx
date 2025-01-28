@@ -1,19 +1,26 @@
 import { Box, Heading, Text, Badge, VStack, HStack, Divider, Stack } from "@chakra-ui/react"
 
 
-const Recipe = ({ recipe }) => {
+const Recipe = ({ recipes }) => {
+
+  if (!recipes || recipes.length === 0) {
+    return <Text>No recipes available.</Text>;
+  }
+
   return (
-    <Box
-      bg="primary.medium"
-      boxShadow="lg"
-      borderRadius="lg"
-      p={6}
-      m={4}
-      maxW="600px"
-      mx="auto"
-    >
+    <Box>
+      {recipes.map((recipe, index) => (
+      <Box key = {index}
+        bg="primary.medium"
+        boxShadow="lg"
+        borderRadius="lg"
+        p={6}
+        m={4}
+        maxW="600px"
+        mx="auto" >
+    
       <Heading size="lg" color="accent.green" mb={4} textAlign="center">
-        {recipe.title}
+        {recipes.title}
       </Heading>
 
       <VStack align="start" spacing={3} mb={6}>
@@ -62,6 +69,8 @@ const Recipe = ({ recipe }) => {
           </Text>
         ))}
       </VStack>
+    </Box>
+    ))}
     </Box>
   )
 }
