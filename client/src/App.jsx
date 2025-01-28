@@ -1,92 +1,49 @@
-import { Box, Flex, Heading, Button, Text, Link, Image } from '@chakra-ui/react';
-import { useState, useEffect } from 'react';
-import reactLogo from './assets/react.svg';
-import viteLogo from '/vite.svg';
+import { Box, Flex, Heading, Button, Text, Link, Image } from '@chakra-ui/react'
+import { useState } from 'react'
+import Recipe from './components/recipe'
+import LandingHeader from './components/landing-header'
+import LandingFooter from './components/landing-footer'
 
-function App() {
-  const [count, setCount] = useState(0);
-  const [message, setMessage] = useState(''); // State for backend message
-
-  // Fetch message from backend
-  useEffect(() => {
-    fetch('/api/hello') // Proxy will route this to backend during development
-      .then((response) => response.json())
-      .then((data) => setMessage(data.message))
-      .catch((error) => console.error('Error fetching API:', error));
-  }, []);
-
-  return (
-    <Box bg="gray.50" minH="100vh" p={4}>
-      {/* Header Section */}
-      <Flex as="header" justify="space-between" align="center" bg="white" p={4} boxShadow="md">
-        <Heading size="lg" color="teal.500">
-          Elastic Eats
-        </Heading>
-        <Flex gap={4}>
-          <Link href="#about" color="teal.500" fontWeight="bold">
-            About
-          </Link>
-          <Link href="#features" color="teal.500" fontWeight="bold">
-            Features
-          </Link>
-          <Link href="#contact" color="teal.500" fontWeight="bold">
-            Contact
-          </Link>
-        </Flex>
-      </Flex>
-
-      {/* Hero Section */}
-      <Flex
-        as="main"
-        direction="column"
-        align="center"
-        justify="center"
-        textAlign="center"
-        mt={10}
-        p={6}
-        bg="white"
-        boxShadow="lg"
-        borderRadius="lg"
-      >
-        <Heading size="2xl" color="teal.600" mb={4}>
-          Welcome to Elastic Eats
-        </Heading>
-        <Text fontSize="lg" color="gray.600" mb={6}>
-          Discover personalized recipes tailored to your tastes, goals, and lifestyle.
-        </Text>
-        <Button
-          colorScheme="teal"
-          size="lg"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Get Started
-        </Button>
-        <Text mt={4} color="gray.500">
-          Button clicked <strong>{count}</strong> times
-        </Text>
-
-        {/* Display message from backend */}
-        <Text mt={6} color="teal.500" fontSize="lg">
-          {message ? `Message from backend: "${message}"` : 'Loading backend message...'}
-        </Text>
-      </Flex>
-
-      {/* Logos Section */}
-      <Flex justify="center" align="center" mt={8} gap={6}>
-        <Link href="https://vite.dev" isExternal>
-          <Image src={viteLogo} alt="Vite logo" boxSize="100px" />
-        </Link>
-        <Link href="https://react.dev" isExternal>
-          <Image src={reactLogo} alt="React logo" boxSize="100px" />
-        </Link>
-      </Flex>
-
-      {/* Footer Section */}
-      <Box as="footer" mt={12} py={4} bg="gray.200" textAlign="center">
-        <Text color="gray.600">© 2025 Elastic Eats. All rights reserved.</Text>
-      </Box>
-    </Box>
-  );
+const mockRecipe = {
+  title: "Grilled Chicken Salad",
+  ingredients: [
+    "2 cups mixed greens",
+    "1/2 cup cherry tomatoes",
+    "1/4 cup sliced cucumber",
+    "1/4 cup crumbled feta cheese",
+    "1 grilled chicken breast, sliced",
+    "2 tbsp balsamic vinaigrette",
+  ],
+  macros: {
+    protein: "35g",
+    fat: "12g",
+    carbs: "15g",
+    fiber: "4g",
+    sodium: "450mg",
+  },
+  instructions: [
+    "Wash and prepare the vegetables.",
+    "Grill the chicken breast until fully cooked.",
+    "Slice the chicken into thin strips.",
+    "Combine greens, tomatoes, cucumber, and feta cheese in a large bowl.",
+    "Top the salad with the grilled chicken slices.",
+    "Drizzle balsamic vinaigrette over the salad and serve.",
+  ],
 }
 
-export default App;
+function App() {
+  const [count, setCount] = useState(0)
+
+  return (
+    <Box bg="primary.light" minH="100vh" fontFamily="body">
+
+      <LandingHeader />
+
+      <Recipe recipe={mockRecipe} />
+
+      <LandingFooter />
+    </Box>
+  )
+}
+
+export default App
