@@ -1,12 +1,14 @@
+version: '3.8'
+
 services:
   frontend:
     build:
-      context: ./elastic-eats-ui  # React project folder
+      context: ./elastic-eats-ui
     ports:
-      - "5173:5173"  # Map Vite's dev server port
+      - "5173:5173"
     environment:
-      NODE_VERSION: 20.12.2  # Node.js version
-      NPM_VERSION: 10.5.0    # npm version
+      NODE_VERSION: 20.12.2
+      NPM_VERSION: 10.5.0
     restart: always
     networks:
       - app-network
@@ -27,6 +29,8 @@ services:
       - elasticsearch
     networks:
       - app-network
+    entrypoint: ["/app/wait-for-elasticsearch.sh"]
+    command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.10.0
@@ -35,20 +39,26 @@ services:
       - discovery.type=single-node
       - xpack.security.enabled=false
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - network.host=0.0.0.0
     ports:
-      - "9200:9200"  # Elasticsearch port
+      - "9200:9200"
     volumes:
       - es_data:/usr/share/elasticsearch/data
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200 | grep -q 'cluster_name'"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
 
   kibana:
     image: docker.elastic.co/kibana/kibana:8.9.0
     container_name: kibana
     environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200  # Pointing to the Elasticsearch container
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     ports:
-      - "5601:5601"  # Kibana's default port
+      - "5601:5601"
     depends_on:
       - elasticsearch
     networks:
