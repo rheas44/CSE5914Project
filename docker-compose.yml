@@ -26,6 +26,8 @@ services:
     volumes:
       - .:/app
     depends_on:
+      # elasticsearch:
+      #   condition: service_healthy
       - elasticsearch
     networks:
       - app-network
