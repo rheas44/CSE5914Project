@@ -23,6 +23,7 @@ services:
       - PYTHONDONTWRITEBYTECODE=1
       - PYTHONUNBUFFERED=1
       - ELASTICSEARCH_HOST=http://elasticsearch:9200
+      - RECIPE_API_KEY=${RECIPE_API_KEY}  # Load from .env file
     volumes:
       - .:/app
     depends_on:
