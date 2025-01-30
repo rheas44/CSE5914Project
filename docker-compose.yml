@@ -1,17 +1,19 @@
 services:
   frontend:
     build:
-      context: ./elastic-eats-ui  # React project folder
+      context: ./elastic-eats-ui
     ports:
-      - "5173:5173"  # Map Vite's dev server port
+      - "5173:5173"
     environment:
-      NODE_VERSION: 20.12.2  # Node.js version
-      NPM_VERSION: 10.5.0    # npm version
+      NODE_VERSION: 20.12.2
+      NPM_VERSION: 10.5.0
       CHOKIDAR_USEPOLLING: true
     volumes:
       - ./elastic-eats-ui:/app
       - /app/node_modules
     restart: always
+    networks:
+      - app-network
 
   app:
     build:
@@ -23,33 +25,60 @@ services:
       - PYTHONDONTWRITEBYTECODE=1
       - PYTHONUNBUFFERED=1
       - ELASTICSEARCH_HOST=http://elasticsearch:9200
+      - RECIPE_API_KEY=${RECIPE_API_KEY}  
     volumes:
       - .:/app
     depends_on:
       - elasticsearch
+    networks:
+      - app-network
+    entrypoint: ["/app/wait-for-elasticsearch.sh"]
+    command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.10.0
     container_name: elasticsearch
     environment:
       - discovery.type=single-node
-      - xpack.security.enabled=false
+      - xpack.security.enabled=true  
+      - xpack.security.authc.apiKey.enabled=true
+      - ELASTICSEARCH_PASSWORD=p5FE3c=alPhGd20o14bx 
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - network.host=0.0.0.0
     ports:
-      - "9200:9200"  # Elasticsearch port
+      - "9200:9200"
     volumes:
       - es_data:/usr/share/elasticsearch/data
+      - es_config:/usr/share/elasticsearch/config  
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200 | grep -q 'cluster_name'"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
 
   kibana:
     image: docker.elastic.co/kibana/kibana:8.9.0
     container_name: kibana
     environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200  # Pointing to the Elasticsearch container
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200  
+      - ELASTICSEARCH_SERVICE_TOKEN=AAEAAWVsYXN0aWMva2liYW5hL2tpYmFuYV90b2tlbjp1U2k0c1YwSFRMR2pUdmZfeDRQSTdR
     ports:
-      - "5601:5601"  # Kibana's default port
+      - "5601:5601"
     depends_on:
       - elasticsearch
+    volumes:
+      - ./kibana.yml:/usr/share/kibana/config/kibana.yml  
+    networks:
+      - app-network
 
 volumes:
   es_data:
     driver: local
+  es_config:
+    driver: local
+
+networks:
+    app-network:
+      driver: bridge
