@@ -18,6 +18,7 @@ function App() {
           throw new Error("Failed to fetch recipes");
         }
         const data = await response.json();
+        console.log(data); // Log the fetched data // For debugging
         setRecipes(data); // Assuming the API returns an array of recipes
       } catch (err) {
         setError(err.message);
@@ -49,7 +50,7 @@ function App() {
           </Box>
         ) : (
           // Render the Recipe component with the fetched recipes
-          <Recipe recipes={recipes} />
+          <Recipe recipes={recipes[1]} />
         )}
       </Box>
 
