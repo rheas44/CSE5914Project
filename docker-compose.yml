@@ -9,6 +9,12 @@ services:
     environment:
       NODE_VERSION: 20.12.2
       NPM_VERSION: 10.5.0
+      NODE_VERSION: 20.12.2  # Node.js version
+      NPM_VERSION: 10.5.0    # npm version
+      CHOKIDAR_USEPOLLING: true
+    volumes:
+      - ./elastic-eats-ui:/app
+      - /app/node_modules
     restart: always
     networks:
       - app-network
