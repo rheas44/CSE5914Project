@@ -7,8 +7,6 @@ services:
     environment:
       NODE_VERSION: 20.12.2
       NPM_VERSION: 10.5.0
-      NODE_VERSION: 20.12.2  # Node.js version
-      NPM_VERSION: 10.5.0    # npm version
       CHOKIDAR_USEPOLLING: true
     volumes:
       - ./elastic-eats-ui:/app
@@ -27,7 +25,7 @@ services:
       - PYTHONDONTWRITEBYTECODE=1
       - PYTHONUNBUFFERED=1
       - ELASTICSEARCH_HOST=http://elasticsearch:9200
-      - RECIPE_API_KEY=${RECIPE_API_KEY}  # Load from .env file
+      - RECIPE_API_KEY=${RECIPE_API_KEY}  
     volumes:
       - .:/app
     depends_on:
@@ -42,16 +40,16 @@ services:
     container_name: elasticsearch
     environment:
       - discovery.type=single-node
-      - xpack.security.enabled=true  # Enable security
+      - xpack.security.enabled=true  
       - xpack.security.authc.apiKey.enabled=true
-      - ELASTICSEARCH_PASSWORD=p5FE3c=alPhGd20o14bx  # Set your password
+      - ELASTICSEARCH_PASSWORD=p5FE3c=alPhGd20o14bx 
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
       - network.host=0.0.0.0
     ports:
       - "9200:9200"
     volumes:
       - es_data:/usr/share/elasticsearch/data
-      - es_config:/usr/share/elasticsearch/config  # Persist config files like service tokens
+      - es_config:/usr/share/elasticsearch/config  
     networks:
       - app-network
     healthcheck:
@@ -64,14 +62,14 @@ services:
     image: docker.elastic.co/kibana/kibana:8.9.0
     container_name: kibana
     environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200  # Pointing to the Elasticsearch container
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200  
       - ELASTICSEARCH_SERVICE_TOKEN=AAEAAWVsYXN0aWMva2liYW5hL2tpYmFuYV90b2tlbjp1U2k0c1YwSFRMR2pUdmZfeDRQSTdR
     ports:
       - "5601:5601"
     depends_on:
       - elasticsearch
     volumes:
-      - ./kibana.yml:/usr/share/kibana/config/kibana.yml  # Add this line
+      - ./kibana.yml:/usr/share/kibana/config/kibana.yml  
     networks:
       - app-network
 

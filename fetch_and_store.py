@@ -5,7 +5,6 @@ from elasticsearch import Elasticsearch
 
 # Load environment variables
 load_dotenv()
-API_KEY = os.getenv("RECIPE_API_KEY")
 ES_HOST = os.getenv("ELASTICSEARCH_HOST", "http://localhost:9200")
 
 # Initialize Elasticsearch client
