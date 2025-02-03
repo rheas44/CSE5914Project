@@ -14,6 +14,7 @@ services:
     restart: always
     networks:
       - app-network
+    command: ["npm", "run", "dev"]
 
   app:
     build:
