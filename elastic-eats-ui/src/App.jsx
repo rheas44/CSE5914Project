@@ -1,4 +1,4 @@
-import { Box, Input, Button, Heading, Text, VStack } from '@chakra-ui/react';
+import { Box, Input, Button, Heading, Text, VStack, Code } from '@chakra-ui/react';
 import { useState } from 'react';
 import Recipe from './components/recipe';
 import LandingHeader from './components/landing-header';
@@ -34,18 +34,22 @@ const mockRecipe = {
   ],
 };
 
-// Builds the homepage
 function Home() {
   const [query, setQuery] = useState('');
-  const [recipes, setRecipes] = useState([]);
+  const [responseData, setResponseData] = useState(null); // Store API response
 
-  // Function to fetch search results
   const handleSearch = async () => {
     if (!query.trim()) return;
 
     try {
       const response = await fetch(`http://localhost:5000/recipes/search?query=${query}`);
       const data = await response.json();
+      
+      console.log("API Response:", data);
+      setResponseData(data);
+    } catch (error) {
+      console.error('Search error:', error);
+      setResponseData({ error: "Failed to fetch recipes." });
       setRecipes(data); // Update state with search results
     } catch (error) {
       console.error('Search error:', error);
@@ -58,6 +62,7 @@ function Home() {
         Welcome to Elastic Eats
       </Heading>
       <Text fontSize="lg" mb={6}>
+        Search for recipes and view raw JSON responses.
         Discover personalized recipes tailored to your tastes, goals, and lifestyle.
       </Text>
 
@@ -74,7 +79,14 @@ function Home() {
           Search
         </Button>
       </VStack>
-
+      {/* Display Raw API JSON Response */}
+      {responseData && (
+        <Box textAlign="left" p={4} border="1px solid gray" borderRadius="md" bg="gray.100">
+          <Text fontWeight="bold">API Response:</Text>
+          <Code as="pre" colorScheme="gray">
+            {JSON.stringify(responseData, null, 2)}
+          </Code>
+        </Box>
       {/* Display Search Results or Mock Recipe */}
       {recipes.length > 0 ? (
         recipes.map((recipe, index) => <Recipe key={index} recipe={recipe} />)
