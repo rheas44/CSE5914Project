@@ -46,8 +46,8 @@ function Home() {
       const response = await fetch(`http://localhost:5000/recipes/search?query=${query}`);
       const data = await response.json();
       
-      console.log("API Response:", data); // ✅ Log response to console
-      setResponseData(data); // ✅ Store raw JSON response
+      console.log("API Response:", data);
+      setResponseData(data);
     } catch (error) {
       console.error('Search error:', error);
       setResponseData({ error: "Failed to fetch recipes." });
