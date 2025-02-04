@@ -7,6 +7,33 @@ import About from './pages/about';
 import Contact from './pages/contact';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
+const mockRecipe = {
+  title: "Grilled Chicken Salad",
+  ingredients: [
+    "2 cups mixed greens",
+    "1/2 cup cherry tomatoes",
+    "1/4 cup sliced cucumber",
+    "1/4 cup crumbled feta cheese",
+    "1 grilled chicken breast, sliced",
+    "2 tbsp balsamic vinaigrette",
+  ],
+  macros: {
+    protein: "35g",
+    fat: "12g",
+    carbs: "15g",
+    fiber: "4g",
+    sodium: "450mg",
+  },
+  instructions: [
+    "Wash and prepare the vegetables.",
+    "Grill the chicken breast until fully cooked.",
+    "Slice the chicken into thin strips.",
+    "Combine greens, tomatoes, cucumber, and feta cheese in a large bowl.",
+    "Top the salad with the grilled chicken slices.",
+    "Drizzle balsamic vinaigrette over the salad and serve.",
+  ],
+};
+
 // Builds the homepage
 function Home() {
   const [query, setQuery] = useState('');
@@ -48,11 +75,11 @@ function Home() {
         </Button>
       </VStack>
 
-      {/* Display Search Results */}
+      {/* Display Search Results or Mock Recipe */}
       {recipes.length > 0 ? (
         recipes.map((recipe, index) => <Recipe key={index} recipe={recipe} />)
       ) : (
-        <Text>No recipes found. Try a different search.</Text>
+        <Recipe recipe={mockRecipe} />
       )}
     </Box>
   );
