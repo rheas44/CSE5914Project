@@ -38,7 +38,6 @@ function Home() {
   const [query, setQuery] = useState('');
   const [responseData, setResponseData] = useState(null); // Store API response
 
-  // Fetch data from Flask API
   const handleSearch = async () => {
     if (!query.trim()) return;
 
@@ -46,11 +45,14 @@ function Home() {
       const response = await fetch(`http://localhost:5000/recipes/search?query=${query}`);
       const data = await response.json();
       
-      console.log("API Response:", data); // ✅ Log response to console
-      setResponseData(data); // ✅ Store raw JSON response
+      console.log("API Response:", data);
+      setResponseData(data);
     } catch (error) {
       console.error('Search error:', error);
       setResponseData({ error: "Failed to fetch recipes." });
+      setRecipes(data); // Update state with search results
+    } catch (error) {
+      console.error('Search error:', error);
     }
   };
 
@@ -61,6 +63,7 @@ function Home() {
       </Heading>
       <Text fontSize="lg" mb={6}>
         Search for recipes and view raw JSON responses.
+        Discover personalized recipes tailored to your tastes, goals, and lifestyle.
       </Text>
 
       {/* Search Bar */}
@@ -76,7 +79,6 @@ function Home() {
           Search
         </Button>
       </VStack>
-
       {/* Display Raw API JSON Response */}
       {responseData && (
         <Box textAlign="left" p={4} border="1px solid gray" borderRadius="md" bg="gray.100">
@@ -85,6 +87,11 @@ function Home() {
             {JSON.stringify(responseData, null, 2)}
           </Code>
         </Box>
+      {/* Display Search Results or Mock Recipe */}
+      {recipes.length > 0 ? (
+        recipes.map((recipe, index) => <Recipe key={index} recipe={recipe} />)
+      ) : (
+        <Recipe recipe={mockRecipe} />
       )}
     </Box>
   );
