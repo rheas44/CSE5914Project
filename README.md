@@ -56,7 +56,7 @@ Important: The frontend (React) and backend (Flask) must be run in separate term
 3. Build the containers:
    ```docker-compose build```
 4. Start the services:
-   ```docker-compose up```
+   ```docker-compose up -d```
 5. Finish setting up Docker:
    ```docker exec -it elasticsearch bash```
 6. Change elasticsearch password:
