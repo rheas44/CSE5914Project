@@ -103,6 +103,7 @@ const Home = () => {
       setRecipes(data); // Update state with search results
     }
   }
+  
 
   return (
     <Flex
@@ -142,7 +143,7 @@ const Home = () => {
       {responseData && (
         <Box textAlign="left" p={4} border="1px solid gray" borderRadius="md" bg="gray.100">
           <Text fontWeight="bold">API Response:</Text>
-          <Code as="pre" colorScheme="gray">
+          <Code as="pre" colorScheme="gray" whiteSpace="pre-wrap">
             {JSON.stringify(responseData, null, 2)}
           </Code>
         </Box>
