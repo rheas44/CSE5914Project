@@ -65,4 +65,3 @@ Important: The frontend (React) and backend (Flask) must be run in separate term
    ```p5FE3c=alPhGd20o14bx```
 8. Exit:
    ```exit```
-9. Access the frontend at [http://localhost:5173](http://localhost:5173).
