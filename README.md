@@ -36,7 +36,7 @@ Important: The frontend (React) and backend (Flask) must be run in separate term
    ```pip install -r requirements.txt```
 3. Start the Flask server:
    ```python server.py```
-4. The backend runs on [http://localhost:5000](http://localhost:5000) (or the specified port).
+4. The backend runs on [http://localhost:1](http://localhost:5001) (or the specified port).
 
 ### Create .env file
 
@@ -56,7 +56,7 @@ Important: The frontend (React) and backend (Flask) must be run in separate term
 3. Build the containers:
    ```docker-compose build```
 4. Start the services:
-   ```docker-compose up```
+   ```docker-compose up -d```
 5. Finish setting up Docker:
    ```docker exec -it elasticsearch bash```
 6. Change elasticsearch password:
@@ -65,4 +65,3 @@ Important: The frontend (React) and backend (Flask) must be run in separate term
    ```p5FE3c=alPhGd20o14bx```
 8. Exit:
    ```exit```
-9. Access the frontend at [http://localhost:5173](http://localhost:5173).
