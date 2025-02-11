@@ -34,7 +34,7 @@ services:
     networks:
       - app-network
     entrypoint: ["/app/wait-for-elasticsearch.sh"]
-    command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+    command: ["python", "server/manage.py", "runserver", "0.0.0.0:8000"]
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.10.0

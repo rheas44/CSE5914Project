@@ -8,8 +8,9 @@ const Home = () => {
 
   const handleSearch = async () => {
     if (!query.trim()) return;
-
-      const response = await fetch(`http://localhost:5001/recipes/search?query=${query}`)
+  
+    try {
+      const response = await fetch(`http://localhost:5001/recipes/search?query=${query}`);
       const data = await response.json();
       
       console.log("API Response:", data);
