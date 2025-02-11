@@ -36,7 +36,7 @@ Important: The frontend (React) and backend (Flask) must be run in separate term
    ```pip install -r requirements.txt```
 3. Start the Flask server:
    ```python server.py```
-4. The backend runs on [http://localhost:5000](http://localhost:5000) (or the specified port).
+4. The backend runs on [http://localhost:1](http://localhost:5001) (or the specified port).
 
 ### Create .env file
 
