@@ -5,7 +5,7 @@ import {
 import { motion } from "framer-motion";
 import Recipe from "./recipe";
 
-const MotionBox = motion(Box);
+const MotionBox = motion.create(Box);
 
 const RecipeCard = ({ recipe, hasNutrition }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -29,10 +29,10 @@ const RecipeCard = ({ recipe, hasNutrition }) => {
           <Text fontWeight="bold" fontSize="lg" mb={2}>
             {recipe.title}
           </Text>
-          <Text fontSize="sm">Protein: {recipe.macros.protein_g}g</Text>
-          <Text fontSize="sm">Fat: {recipe.macros.fat_total_g}g</Text>
-          <Text fontSize="sm">Carbs: {recipe.macros.carbohydrates_total_g}g</Text>
-          <Text fontSize="sm" fontWeight="bold">Calories: {recipe.macros.calories}</Text>
+          <Text fontSize="sm">Protein: {Math.trunc(recipe.macros.protein_g)}g</Text>
+          <Text fontSize="sm">Fat: {Math.trunc(recipe.macros.fat_total_g)}g</Text>
+          <Text fontSize="sm">Carbs: {Math.trunc(recipe.macros.carbohydrates_total_g)}g</Text>
+          <Text fontSize="sm" fontWeight="bold">Calories: {Math.trunc(recipe.macros.calories)}</Text>
         </MotionBox>
 
         {/* Modal for full recipe */}

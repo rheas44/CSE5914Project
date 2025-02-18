@@ -186,7 +186,7 @@ const Home = () => {
             mx="auto"
           >
             {recipes.map((recipe, index) => (
-              <RecipeCard key={index} recipe={recipe} hasNutrition={false}/>
+              <RecipeCard key={index} recipe={recipe} hasNutrition={true}/>
             ))}
           </Grid>
         </>

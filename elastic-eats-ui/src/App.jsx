@@ -1,12 +1,22 @@
-import { Flex } from '@chakra-ui/react';
+import { Flex, useDisclosure } from '@chakra-ui/react';
 import LandingHeader from './components/landing-header';
 import LandingFooter from './components/landing-footer';
 import About from './pages/about';
 import Contact from './pages/contact';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from "./pages/home";
+import LoginCard from './components/login-card';
+import { useEffect } from "react";
 
 function App() {
+  const { isOpen, onOpen, onClose } = useDisclosure();
+
+  useEffect(() => {
+    if (window.location.pathname === "/modal") {
+      onOpen();
+    }
+  }, [onOpen]);
+
   return (
     <Flex
       direction="column"

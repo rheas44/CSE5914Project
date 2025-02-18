@@ -82,5 +82,36 @@ def search_recipes():
 
     return jsonify(recipes)
 
+@app.route('/login', methods=['POST'])
+def login():
+    """Handle user login requests."""
+    data = request.get_json()
+    username = data.get("username")
+    password = data.get("password")
+
+    if not username or not password:
+        return jsonify({"error": "Username and password are required"}), 400
+
+    # Search for the user in Elasticsearch
+    es_query = {
+        "query": {
+            "bool": {
+                "must": [
+                    {"match": {"username": username}},  # Assuming username is indexed
+                ]
+            }
+        }
+    }
+
+    try:
+        results = es.search(index="users", body=es_query)  # Assuming users are stored in 'users' index
+        if results["hits"]["total"]["value"] > 0:
+            return jsonify({"message": "Login successful!"}), 200
+        else:
+            return jsonify({"error": "Invalid username or password"}), 401
+    except Exception as e:
+        print("Error querying Elasticsearch:", e)
+        return jsonify({"error": "Internal server error"}), 500
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001)
