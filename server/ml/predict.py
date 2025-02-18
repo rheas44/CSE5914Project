@@ -1,3 +1,6 @@
+from train import train
+from data_loader import load_mock_data
+
 # predict.py - Mock inference
 def predict(model):
     data = load_mock_data()

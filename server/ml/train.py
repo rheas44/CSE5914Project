@@ -1,6 +1,7 @@
 # train.py - Trains a mock GCN model
 from graph_model import GCN
 from data_loader import load_mock_data
+import torch
 
 def train():
     data = load_mock_data()
@@ -23,3 +24,7 @@ def train():
         if epoch % 10 == 0:
             print(f'Epoch {epoch}, Loss: {loss.item()}')
     return model
+
+if __name__ == '__main__':
+    trained_model = train()
+    print("trained model")

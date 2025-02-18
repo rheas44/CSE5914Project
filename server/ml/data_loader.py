@@ -5,7 +5,7 @@ from torch_geometric.data import Data
 def load_mock_data():
     # Nodes (0 = Chicken, 1 = Protein, 2 = Salad Recipe, 3 = Olive Oil, 4 = Fat)
     node_names = ["chicken", "protein", "grilled_chicken_salad", "olive oil", "fat"]
-    
+    print("in load data")
     # Example Edges:
     # Chicken → Protein (Ingredient contains nutrient)
     # Protein → Grilled Chicken Salad (Recipe contains protein)
