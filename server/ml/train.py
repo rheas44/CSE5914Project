@@ -25,20 +25,20 @@ def train():
     print(f"🔄 Updated Category Weights: {category_weights}")
 
     # Extract Features
-    calories = data.x[:, 0]
-    protein = data.x[:, 1]
-    sugar = data.x[:, 2]
-    carbs = data.x[:, 3]
-    sodium = data.x[:, 4]
+    feature_names = ["calories", "protein", "sugar", "carbs", "sodium"]
+    features = {name: data.x[:, i] for i, name in enumerate(feature_names)}
 
-    # Weighted Health Score Calculation
-    health_scores = (
-        (calories * category_weights["calories"]) +
-        (protein * category_weights["protein"]) +
-        (sugar * category_weights["sugar"]) +
-        (carbs * category_weights["carbs"]) +
-        (sodium * category_weights["sodium"])
-    )
+    # Normalize Data (Avoid divide-by-zero errors)
+    mean_vals = data.x.mean(dim=0)
+    std_vals = data.x.std(dim=0) + 1e-6  # Prevent division by zero
+    z_scores = (data.x - mean_vals) / std_vals  # Standardize features
+
+    # **Dynamically Adjust Scoring Based on User Preferences**
+    health_scores = torch.zeros_like(data.x[:, 0])  # Initialize scores to zero
+
+    for feature, weight in category_weights.items():
+        idx = feature_names.index(feature)
+        health_scores += z_scores[:, idx] * weight
 
     # Normalize Scores (Avoid divide-by-zero)
     min_score, max_score = health_scores.min(), health_scores.max()
@@ -47,10 +47,17 @@ def train():
     else:
         health_scores = torch.zeros_like(health_scores)
 
+    print(f"\n📊 Health Scores - Min: {health_scores.min():.4f}, Max: {health_scores.max():.4f}, Mean: {health_scores.mean():.4f}, Std Dev: {health_scores.std():.4f}")
+
+    # **Determine Adaptive Threshold Based on User Preferences**
+    mean_score = health_scores.mean().item()
+    std_dev = health_scores.std().item()
+    threshold = max(0.2, min(mean_score + (0.25 * std_dev), 0.9))
+
     # Define Classification Labels
-    threshold = 0.5  # User-defined threshold for "healthy" vs. "unhealthy"
     labels = (health_scores > threshold).long()
 
+    print(f"\n📏 Adaptive Healthiness Threshold: {threshold:.4f}")
     print("\n📊 Unique Labels:", torch.unique(labels))
     print("📊 Label Counts:", torch.bincount(labels))
 
@@ -61,7 +68,6 @@ def train():
 
     ## ✅ Fix for valid index mapping
     old_to_new = {int(old_idx): new_idx for new_idx, old_idx in enumerate(valid_indices.tolist())}
-
 
     # ✅ Remap the edge index using the updated node mapping
     mask = torch.tensor(
@@ -80,7 +86,7 @@ def train():
 
     # Handle Class Imbalance
     class_counts = torch.bincount(labels, minlength=2).float()
-    class_weights = 1.0 / (class_counts + 1e-6)
+    class_weights = torch.log(1.0 + (1.0 / (class_counts + 1e-6)))
     class_weights /= class_weights.sum()
     print("\n⚖️ Class Weights:", class_weights)
 
@@ -118,8 +124,18 @@ def train():
     # Suggest recipe modifications for unhealthy recipes
     for i, recipe in enumerate(data.x):
         if preds[i] == 1:
-            modifications = suggest_modifications(recipe)
-            print(f"\n🛠 Suggested Modifications for Recipe {i}: {modifications}")
+            recipe_name = data.recipe_names[i] if hasattr(data, "recipe_names") else f"Recipe {i}"
+            ingredients = data.recipe_ingredients[i] if hasattr(data, "recipe_ingredients") else []
+            macros = {
+                "calories": recipe[0].item(),
+                "protein_g": recipe[1].item(),  # Match expected key
+                "sugar_g": recipe[2].item(),    # Match expected key
+                "carbohydrates_total_g": recipe[3].item(),  # Match expected key
+                "sodium_mg": recipe[4].item()   # Match expected key
+            }
+            modifications = suggest_modifications(recipe_name, ingredients, macros, user_priority)
+
+            print(f"\n🛠 Suggested Modifications for '{recipe_name}': {modifications}")
 
     return model, data
 
