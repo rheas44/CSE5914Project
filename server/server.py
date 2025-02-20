@@ -67,7 +67,6 @@ def search_recipes():
 
     try:
         results = es.search(index="recipe_box", body=es_query)
-        print(results["hits"]["hits"])
         recipes = [hit["_source"] for hit in results["hits"]["hits"]]
     except Exception as e:
         print("Error querying Elasticsearch:", e)
@@ -98,6 +97,7 @@ def login():
             "bool": {
                 "must": [
                     {"match": {"username": username}},  # Assuming username is indexed
+                    {"term": {"password": password}}  # Using term query for exact match
                 ]
             }
         }
@@ -106,7 +106,7 @@ def login():
     try:
         results = es.search(index="users", body=es_query)  # Assuming users are stored in 'users' index
         if results["hits"]["total"]["value"] > 0:
-            return jsonify({"message": "Login successful!"}), 200
+            return jsonify({"message": "Login successful!", "user_id": results["hits"]['hits'][0]['_id']}), 200
         else:
             return jsonify({"error": "Invalid username or password"}), 401
     except Exception as e:

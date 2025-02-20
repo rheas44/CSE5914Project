@@ -24,8 +24,11 @@ import {
                 body: JSON.stringify({ username, password }),
             });
             const data = await response.json();
-            
-            console.log("Login Successful!", data);
+        
+            if (data.message) {
+                console.log("Login Successful!", data.message);
+                onClose(); // Close the modal if login is successful
+            }
         } catch (error) {
             console.error('Login error:', error);
         }
