@@ -1,4 +1,5 @@
-import { Box, Flex, Heading, Text, Grid, Divider, VStack, Button, Input } from '@chakra-ui/react';
+import { Box, Flex, Heading, Text, Grid, Divider, VStack, Button, Input, RangeSlider, RangeSliderTrack, RangeSliderFilledTrack, RangeSliderThumb } from '@chakra-ui/react';
+import { Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton } from '@chakra-ui/react';
 import RecipeCard from '../components/recipe-card';
 import { useState } from 'react';
 import Recipe from '../components/recipe';
@@ -86,19 +87,41 @@ const mockRecipes = [
 const Home = () => {
   const [query, setQuery] = useState('');
   const [recipes, setRecipes] = useState([]); // Store search results
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const maxProtein = 100;
+  const maxCarbs = 100;
+  const maxFat = 100;
+  const maxCalories = 5000;
+  const [proteinRange, setProteinRange] = useState([0, maxProtein]);
+  const [carbsRange, setCarbsRange] = useState([0, maxCarbs]);
+  const [fatRange, setFatRange] = useState([0, maxFat]);
+  const [caloriesRange, setCaloriesRange] = useState([0, maxCalories]);
+
 
   const handleSearch = async () => {
     if (!query.trim()) return;
   
     try {
-      const response = await fetch(`http://localhost:5001/recipes/search?query=${query}`);
+      const response = await fetch("http://localhost:5001/recipes/search", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          query,
+          proteinRange,
+          carbsRange,
+          fatRange,
+          caloriesRange,
+        }),
+      });
+  
       const data = await response.json();
-      
       console.log("API Response:", data);
-      setRecipes(data); // Update state with search results
+      setRecipes(data);
     } catch (error) {
-      console.error('Search error:', error);
-      setRecipes([]); // Clear recipes on error
+      console.error("Search error:", error);
+      setRecipes([]);
     }
   };
 
@@ -155,6 +178,7 @@ const Home = () => {
 
       {/* Search Bar */}
       <VStack spacing={4} mb={6}>
+      
         <Input
           placeholder="Search for recipes..."
           value={query}
@@ -165,7 +189,87 @@ const Home = () => {
         <Button colorScheme="green" onClick={handleSearch}>
           Search
         </Button>
+        <Button colorScheme="green" onClick={() => setIsFilterOpen(true)}>
+          Filter
+        </Button>
+        
       </VStack>
+      
+      {/* Filter */}
+      <Modal isOpen={isFilterOpen} onClose={() => setIsFilterOpen(false)} isCentered>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Filter Nutrition Facts</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <VStack spacing={4} align="stretch">
+
+              {/* Protein Range Slider */}
+              <Box>
+                <Text>Protein: {proteinRange[0]}g - {proteinRange[1]}g</Text>
+                <RangeSlider 
+                  min={0} max={maxProtein} step={1} 
+                  value={proteinRange} 
+                  onChange={setProteinRange}
+                >
+                  <RangeSliderTrack><RangeSliderFilledTrack /></RangeSliderTrack>
+                  <RangeSliderThumb index={0} />
+                  <RangeSliderThumb index={1} />
+                </RangeSlider>
+              </Box>
+
+              {/* Carbs Range Slider */}
+              <Box>
+                <Text>Carbs: {carbsRange[0]}g - {carbsRange[1]}g</Text>
+                <RangeSlider 
+                  min={0} max={maxCarbs} step={1} 
+                  value={carbsRange} 
+                  onChange={setCarbsRange}
+                >
+                  <RangeSliderTrack><RangeSliderFilledTrack /></RangeSliderTrack>
+                  <RangeSliderThumb index={0} />
+                  <RangeSliderThumb index={1} />
+                </RangeSlider>
+              </Box>
+
+              {/* Fat Range Slider */}
+              <Box>
+                <Text>Fat: {fatRange[0]}g - {fatRange[1]}g</Text>
+                <RangeSlider 
+                  min={0} max={maxFat} step={1} 
+                  value={fatRange} 
+                  onChange={setFatRange}
+                >
+                  <RangeSliderTrack><RangeSliderFilledTrack /></RangeSliderTrack>
+                  <RangeSliderThumb index={0} />
+                  <RangeSliderThumb index={1} />
+                </RangeSlider>
+              </Box>
+
+              {/* Calories Range Slider */}
+              <Box>
+                <Text>Calories: {caloriesRange[0]} kcal - {caloriesRange[1]} kcal</Text>
+                <RangeSlider 
+                  min={0} max={maxCalories} step={10} 
+                  value={caloriesRange} 
+                  onChange={setCaloriesRange}
+                >
+                  <RangeSliderTrack><RangeSliderFilledTrack /></RangeSliderTrack>
+                  <RangeSliderThumb index={0} />
+                  <RangeSliderThumb index={1} />
+                </RangeSlider>
+              </Box>
+
+            </VStack>
+          </ModalBody>
+          <ModalFooter>
+            <Button colorScheme="green" onClick={() => setIsFilterOpen(false)}>Apply Filters</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+
+
 
       {/* Recipe Cards Grid */}
       {recipes.length > 0 ? (
@@ -196,6 +300,8 @@ const Home = () => {
         </Text>
       )}
     </Flex>
+
+    
   );
 };
 
