@@ -1,49 +1,30 @@
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv
+from torch_geometric.nn import GATConv
 
-class GCN(nn.Module):
+class GCN(torch.nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim):
         super(GCN, self).__init__()
         self.conv1 = GCNConv(input_dim, hidden_dim)
         self.conv2 = GCNConv(hidden_dim, output_dim)
-
-        self.reset_parameters()  # Xavier Initialization
-
-    def reset_parameters(self):
-        nn.init.xavier_uniform_(self.conv1.lin.weight)
-        nn.init.xavier_uniform_(self.conv2.lin.weight)
+        self.fc = torch.nn.Linear(output_dim, output_dim)  # Fully connected layer for LLM integration
 
     def forward(self, x, edge_index):
         x = self.conv1(x, edge_index)
         x = F.relu(x)
         x = self.conv2(x, edge_index)
-        return x
-
-
-
-
+        x = self.fc(x)  # Allow the LLM to fine-tune the output representation
+        return F.log_softmax(x, dim=1)
+    
 class GAT(torch.nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim):
-        super().__init__()
-        self.conv1 = GATConv(input_dim, hidden_dim)
-        self.bn1 = BatchNorm1d(hidden_dim)  # Batch Normalization
-        self.conv2 = GATConv(hidden_dim, output_dim)
-
-        self.reset_parameters()  # Apply Xavier Initialization
-
-    def reset_parameters(self):
-        """ Apply Xavier initialization to all layers """
-        for layer in self.children():
-            if hasattr(layer, 'reset_parameters'):
-                layer.reset_parameters()
-            elif isinstance(layer, torch.nn.Linear):  # Additional check for FC layers
-                torch.nn.init.xavier_uniform_(layer.weight)
+    def __init__(self, input_dim, hidden_dim, output_dim, heads=2):
+        super(GAT, self).__init__()
+        self.conv1 = GATConv(input_dim, hidden_dim, heads=heads, dropout=0.6)
+        self.conv2 = GATConv(hidden_dim * heads, output_dim, heads=1, concat=False, dropout=0.6)
 
     def forward(self, x, edge_index):
-        x = self.conv1(x, edge_index)
-        x = self.bn1(x)  # Normalize activations
-        x = F.relu(x)
+        x = F.elu(self.conv1(x, edge_index))
         x = self.conv2(x, edge_index)
-        return x
+        return F.log_softmax(x, dim=1)
+
