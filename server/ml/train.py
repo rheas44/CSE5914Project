@@ -35,13 +35,24 @@ def train():
         (sodium * category_weights["sodium"])
     )
 
-    # Normalize Scores (higher is worse)
-    health_scores = (health_scores - health_scores.min()) / (health_scores.max() - health_scores.min())
+    # Normalize Scores (Avoid divide-by-zero)
+    min_score, max_score = health_scores.min(), health_scores.max()
+    if max_score - min_score > 0:
+        health_scores = (health_scores - min_score) / (max_score - min_score)
+    else:
+        health_scores = torch.zeros_like(health_scores)
+
+    print(f"\n📊 Health Scores - Min: {health_scores.min():.4f}, Max: {health_scores.max():.4f}, Mean: {health_scores.mean():.4f}, Std Dev: {health_scores.std():.4f}")
+
+    # **Determine Adaptive Threshold Based on User Preferences**
+    mean_score = health_scores.mean().item()
+    std_dev = health_scores.std().item()
+    threshold = max(0.2, min(mean_score + (0.25 * std_dev), 0.9))
 
     # Define Classification Labels
-    threshold = 0.5  # User-defined threshold for "healthy" vs. "unhealthy"
     labels = (health_scores > threshold).long()
 
+    print(f"\n📏 Adaptive Healthiness Threshold: {threshold:.4f}")
     print("\n📊 Unique Labels:", torch.unique(labels))
     print("📊 Label Counts:", torch.bincount(labels))
 
@@ -78,18 +89,24 @@ def train():
     # ✅ Create mapping from old to new indices
     old_to_new = {int(old_idx): new_idx for new_idx, old_idx in enumerate(valid_indices.tolist())}
 
-    # ✅ Filter and remap edges
-    new_edges = [
-        [old_to_new[src], old_to_new[dst]] for src, dst in data.edge_index.t().tolist()
-        if src in old_to_new and dst in old_to_new
-    ]
-    data.edge_index = torch.tensor(new_edges, dtype=torch.long).t().contiguous()
+    # ✅ Remap the edge index using the updated node mapping
+    mask = torch.tensor(
+        [(src in old_to_new and dst in old_to_new) for src, dst in data.edge_index.t().tolist()],
+        dtype=torch.bool
+    )
+    data.edge_index = data.edge_index[:, mask]  # Remove edges not in valid_indices
+
+    # ✅ Convert old indices to new ones
+    data.edge_index = torch.tensor(
+        [[old_to_new[src.item()], old_to_new[dst.item()]] for src, dst in data.edge_index.t()],
+        dtype=torch.long
+    ).t().contiguous()
 
     print("✅ Edge index successfully remapped!")
 
     # ✅ Handle Class Imbalance
     class_counts = torch.bincount(labels, minlength=2).float()
-    class_weights = 1.0 / (class_counts + 1e-6)
+    class_weights = torch.log(1.0 + (1.0 / (class_counts + 1e-6)))
     class_weights /= class_weights.sum()
     print("\n⚖️ Class Weights:", class_weights)
 
@@ -124,6 +141,22 @@ def train():
     print(classification_report(true_labels, preds, digits=4))
     print("\n🧩 **Confusion Matrix:**")
     print(confusion_matrix(true_labels, preds))
+
+    # Suggest recipe modifications for unhealthy recipes
+    for i, recipe in enumerate(data.x):
+        if preds[i] == 1:
+            recipe_name = data.recipe_names[i] if hasattr(data, "recipe_names") else f"Recipe {i}"
+            ingredients = data.recipe_ingredients[i] if hasattr(data, "recipe_ingredients") else []
+            macros = {
+                "calories": recipe[0].item(),
+                "protein_g": recipe[1].item(),  # Match expected key
+                "sugar_g": recipe[2].item(),    # Match expected key
+                "carbohydrates_total_g": recipe[3].item(),  # Match expected key
+                "sodium_mg": recipe[4].item()   # Match expected key
+            }
+            modifications = suggest_modifications(recipe_name, ingredients, macros, user_priority)
+
+            print(f"\n🛠 Suggested Modifications for '{recipe_name}': {modifications}")
 
     return model, data
 
