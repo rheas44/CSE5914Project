@@ -76,9 +76,17 @@ def train():
 
     # Get the selected recipe
     selected_recipe = healthy_recipes[choice]
+    ingredients = data.recipe_ingredients[i] if hasattr(data, "recipe_ingredients") else []
+    macros = {
+        "calories": recipe[0].item(),
+        "protein_g": recipe[1].item(),  # Match expected key
+        "sugar_g": recipe[2].item(),    # Match expected key
+        "carbohydrates_total_g": recipe[3].item(),  # Match expected key
+        "sodium_mg": recipe[4].item()   # Match expected key
+    }
 
     # ✅ Call LLM to suggest modifications for the selected recipe
-    modifications = suggest_modifications(selected_recipe)
+    modifications = suggest_modifications(selected_recipe, ingredients, macros, user_priority)
     print(f"\n🛠 Suggested Modifications for Selected Recipe:\n{modifications}")
 
     # ✅ Filter Data to Only Keep Valid Nodes
@@ -141,22 +149,6 @@ def train():
     print(classification_report(true_labels, preds, digits=4))
     print("\n🧩 **Confusion Matrix:**")
     print(confusion_matrix(true_labels, preds))
-
-    # Suggest recipe modifications for unhealthy recipes
-    for i, recipe in enumerate(data.x):
-        if preds[i] == 1:
-            recipe_name = data.recipe_names[i] if hasattr(data, "recipe_names") else f"Recipe {i}"
-            ingredients = data.recipe_ingredients[i] if hasattr(data, "recipe_ingredients") else []
-            macros = {
-                "calories": recipe[0].item(),
-                "protein_g": recipe[1].item(),  # Match expected key
-                "sugar_g": recipe[2].item(),    # Match expected key
-                "carbohydrates_total_g": recipe[3].item(),  # Match expected key
-                "sodium_mg": recipe[4].item()   # Match expected key
-            }
-            modifications = suggest_modifications(recipe_name, ingredients, macros, user_priority)
-
-            print(f"\n🛠 Suggested Modifications for '{recipe_name}': {modifications}")
 
     return model, data
 
