@@ -17,11 +17,6 @@ def train():
     # User Preference Input
     user_priority = input("Enter your health priority (e.g., 'low sugar, high protein'): ").strip().lower()
     category_weights = adjust_category_weights(user_priority)
-
-    if not category_weights:
-        print("⚠️ Failed to parse Ollama's response. Using default weights.")
-        category_weights = {"calories": 1.0, "protein": 1.0, "sugar": 1.0, "carbs": 1.0, "sodium": 1.0}
-
     print(f"🔄 Updated Category Weights: {category_weights}")
 
     # Extract Features
@@ -40,12 +35,8 @@ def train():
         (sodium * category_weights["sodium"])
     )
 
-    # Normalize Scores (Avoid divide-by-zero)
-    min_score, max_score = health_scores.min(), health_scores.max()
-    if max_score - min_score > 0:
-        health_scores = (health_scores - min_score) / (max_score - min_score)
-    else:
-        health_scores = torch.zeros_like(health_scores)
+    # Normalize Scores (higher is worse)
+    health_scores = (health_scores - health_scores.min()) / (health_scores.max() - health_scores.min())
 
     # Define Classification Labels
     threshold = 0.5  # User-defined threshold for "healthy" vs. "unhealthy"
@@ -54,49 +45,68 @@ def train():
     print("\n📊 Unique Labels:", torch.unique(labels))
     print("📊 Label Counts:", torch.bincount(labels))
 
-    # 🔹 Filter out "empty" recipes
-    valid_indices = health_scores.nonzero(as_tuple=True)[0]
-    data.x = data.x[valid_indices]
-    labels = labels[valid_indices]  # Ensure labels match filtered nodes
+    # 🔹 Get indices for healthy recipes
+    healthy_indices = (labels == 0).nonzero(as_tuple=True)[0]
+    healthy_recipes = data.x[healthy_indices]
 
-    ## ✅ Fix for valid index mapping
+    # Print healthy recipes
+    print("\n✅ Healthy Recipes:")
+    for i, recipe in enumerate(healthy_recipes):
+        print(f"[{i}] Calories: {recipe[0]:.1f} | Protein: {recipe[1]:.1f}g | Sugar: {recipe[2]:.1f}g | Carbs: {recipe[3]:.1f}g | Sodium: {recipe[4]:.1f}mg")
+
+    # Ask the user to select a recipe for modification
+    try:
+        choice = int(input("\nEnter the number of the recipe you'd like to modify: "))
+        if choice < 0 or choice >= len(healthy_recipes):
+            raise ValueError("Invalid selection. Please choose a valid number.")
+    except ValueError as e:
+        print(f"⚠️ {e}")
+        return
+
+    # Get the selected recipe
+    selected_recipe = healthy_recipes[choice]
+
+    # ✅ Call LLM to suggest modifications for the selected recipe
+    modifications = suggest_modifications(selected_recipe)
+    print(f"\n🛠 Suggested Modifications for Selected Recipe:\n{modifications}")
+
+    # ✅ Filter Data to Only Keep Valid Nodes
+    valid_indices = health_scores.nonzero(as_tuple=True)[0]  # Keep only valid recipes
+    data.x = data.x[valid_indices]
+    labels = labels[valid_indices]  # ✅ Ensure labels match filtered nodes
+
+    # ✅ Create mapping from old to new indices
     old_to_new = {int(old_idx): new_idx for new_idx, old_idx in enumerate(valid_indices.tolist())}
 
-
-    # ✅ Remap the edge index using the updated node mapping
-    mask = torch.tensor(
-        [(src in old_to_new and dst in old_to_new) for src, dst in data.edge_index.t().tolist()],
-        dtype=torch.bool
-    )
-    data.edge_index = data.edge_index[:, mask]  # Remove edges not in valid_indices
-
-    # ✅ Convert old indices to new ones
-    data.edge_index = torch.tensor(
-        [[old_to_new[src.item()], old_to_new[dst.item()]] for src, dst in data.edge_index.t()],
-        dtype=torch.long
-    ).t().contiguous()
+    # ✅ Filter and remap edges
+    new_edges = [
+        [old_to_new[src], old_to_new[dst]] for src, dst in data.edge_index.t().tolist()
+        if src in old_to_new and dst in old_to_new
+    ]
+    data.edge_index = torch.tensor(new_edges, dtype=torch.long).t().contiguous()
 
     print("✅ Edge index successfully remapped!")
 
-    # Handle Class Imbalance
+    # ✅ Handle Class Imbalance
     class_counts = torch.bincount(labels, minlength=2).float()
     class_weights = 1.0 / (class_counts + 1e-6)
     class_weights /= class_weights.sum()
     print("\n⚖️ Class Weights:", class_weights)
 
-    # Define Model
-    model = GAT(input_dim=5, hidden_dim=8, output_dim=2)  # Using GAT instead of GCN
+    # ✅ Define Model
+    model = GAT(input_dim=5, hidden_dim=8, output_dim=2)
     optimizer = optim.Adam(model.parameters(), lr=0.01)
     criterion = torch.nn.CrossEntropyLoss(weight=class_weights.to(torch.float32))
 
-    # Training Loop
+    # ✅ Training Loop
     for epoch in range(200):
         optimizer.zero_grad()
         output = model(data.x, data.edge_index)
-
+        
+        # ✅ Ensure batch sizes match
         if output.shape[0] != labels.shape[0]:
-            print(f"❌ Error: Mismatch in batch sizes: output={output.shape}, labels={labels.shape}")
-            break  # Avoid crashing, exit gracefully
+            print(f"❌ Error: Model output size {output.shape[0]} does not match labels {labels.shape[0]}")
+            return
 
         loss = criterion(output, labels)
         loss.backward()
@@ -107,7 +117,7 @@ def train():
 
     print("\n✅ Model trained successfully.")
 
-    # 🔍 Evaluation
+    # ✅ Evaluation
     preds = output.argmax(dim=1).cpu().numpy()
     true_labels = labels.cpu().numpy()
     print("\n📊 **Classification Report:**")
@@ -115,14 +125,12 @@ def train():
     print("\n🧩 **Confusion Matrix:**")
     print(confusion_matrix(true_labels, preds))
 
-    # Suggest recipe modifications for unhealthy recipes
-    for i, recipe in enumerate(data.x):
-        if preds[i] == 1:
-            modifications = suggest_modifications(recipe)
-            print(f"\n🛠 Suggested Modifications for Recipe {i}: {modifications}")
-
     return model, data
 
 if __name__ == '__main__':
-    trained_model, graph_data = train()
-    exit()
+    try:
+        trained_model, graph_data = train()
+    except Exception as e:
+        print(f"❌ Error: {e}")
+    finally:
+        torch.cuda.empty_cache()

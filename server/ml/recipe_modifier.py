@@ -45,7 +45,7 @@ def adjust_category_weights(user_priority):
 
 def suggest_modifications(recipe):
     """
-    Uses Ollama to suggest modifications for unhealthy recipes.
+    Uses Ollama to suggest modifications for user-selected recipes.
     """
     prompt = f"""
     The following recipe has high values in some nutritional aspects:
