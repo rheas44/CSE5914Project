@@ -48,9 +48,15 @@ const Signup = () => {
 
   return (
     successSignup ? (
-      <Text textAlign="center" fontSize="xl" color="accent.green">
-        Successfully signed up!
-      </Text>
+      <Box maxW="800px" mx="auto" textAlign="center" p={6}>
+        <Heading size="2xl" color="accent.green" mb={4}>
+          Sign Up Successful!
+        </Heading>
+        <Divider my={6} />
+        <Text textAlign="center" fontSize="xl" color="accent.green">
+          Successfully signed up!
+        </Text>
+      </Box>
     ) : (
       <Box maxW="800px" mx="auto" textAlign="center" p={6}>
         <Heading size="2xl" color="accent.green" mb={4}>

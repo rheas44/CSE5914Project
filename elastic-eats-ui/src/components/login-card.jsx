@@ -4,7 +4,8 @@ import {
   } from "@chakra-ui/react";
   import { motion } from "framer-motion";
   import { useState } from 'react';
-  import { Link as RouterLink } from 'react-router-dom';
+  import { Link as RouterLink, useNavigate } from 'react-router-dom';
+  import { useUser } from "./UserContext";
   
   const MotionBox = motion.create(Box);
   
@@ -12,6 +13,8 @@ import {
 
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const navigate = useNavigate();
+    const { setUser } = useUser();
 
     const handleLogin = async () => {
         if (!username.trim() || !password.trim()) return;
@@ -35,7 +38,10 @@ import {
             }
         
             if (data.message) {
-                console.log("Login Successful!", data.message);                
+                console.log("Login Successful!", data.message); 
+                setUser({ username: username, user_id: data.user_id });
+                onClose(); 
+                navigate("/");              
             }
         } catch (error) {
             console.error('Login error:', error);
