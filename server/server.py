@@ -7,7 +7,7 @@ from flask_cors import CORS  # Enable CORS to allow frontend access
 
 # Load environment variables
 load_dotenv()
-ES_HOST = os.getenv("ELASTICSEARCH_HOST", "http://localhost:9200")
+ES_HOST = os.getenv("ELASTICSEARCH_HOST", "http://elasticsearch:9200")
 API_KEY = os.getenv("RECIPE_API_KEY")  # Ensure API key is set in .env
 ES_PASS = os.getenv("ELASTICSEARCH_PW")
 ES_USER = "elastic"
@@ -18,6 +18,14 @@ CORS(app)  # Enable CORS for frontend communication
 
 # Initialize Elasticsearch client
 es = Elasticsearch(ES_HOST, basic_auth=(ES_USER, ES_PASS))
+# Connect to Elasticsearch
+try:
+    if es.ping():
+        print("This is server.py: Successfully connected to Elasticsearch!")
+    else:
+        print("Failed to connect to Elasticsearch.")
+except Exception as e:
+    print(f"Error connecting to Elasticsearch: {e}")
 
 def fetch_recipes(query):
     """Fetch recipes from API-Ninjas and return JSON response."""
@@ -55,8 +63,11 @@ def search_recipes():
         }
     }
 
+    print("Query Pulled from frontend:", query)
+
     try:
-        results = es.search(index="recipes", body=es_query)
+        results = es.search(index="recipe_box", body=es_query)
+        print(results["hits"]["hits"])
         recipes = [hit["_source"] for hit in results["hits"]["hits"]]
     except Exception as e:
         print("Error querying Elasticsearch:", e)
@@ -72,4 +83,4 @@ def search_recipes():
     return jsonify(recipes)
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5001)
+    app.run(debug=True, host='0.0.0.0', port=5001)

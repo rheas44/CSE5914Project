@@ -1,4 +1,4 @@
-# Ignore environment variables
+# Ignore env
 .env
 
 # Ignore Python dependencies
@@ -16,6 +16,9 @@ dist/
 # Ignore Docker files
 *.pid
 logs/
+
+# Ignore yml
+*.yml
 
 # Logs
 logs
