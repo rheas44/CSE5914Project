@@ -33,6 +33,7 @@ services:
       - elasticsearch
     networks:
       - app-network
+    entrypoint: ["/app/wait-for-elasticsearch.sh"]
     command: ["python", "server/server.py", "runserver", "0.0.0.0:5001"]
 
   elasticsearch:
