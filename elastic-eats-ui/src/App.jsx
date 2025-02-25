@@ -7,6 +7,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from "./pages/home";
 import LoginCard from './components/login-card';
 import { useEffect } from "react";
+import Signup from './pages/signup';
 
 function App() {
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -32,6 +33,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
+            <Route path="/signup" element={<Signup />} />
           </Routes>
         </Flex>
 
