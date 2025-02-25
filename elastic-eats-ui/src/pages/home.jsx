@@ -1,5 +1,6 @@
-import { Box, Flex, Heading, Text, Grid, Divider, VStack, Button, Input, RangeSlider, RangeSliderTrack, RangeSliderFilledTrack, RangeSliderThumb } from '@chakra-ui/react';
+import { Box, Flex, Heading, Text, Grid, Divider, VStack, Button, Input, Select, IconButton } from '@chakra-ui/react';
 import { Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton } from '@chakra-ui/react';
+import { DeleteIcon } from '@chakra-ui/icons';
 import RecipeCard from '../components/recipe-card';
 import { useState } from 'react';
 import Recipe from '../components/recipe';
@@ -86,222 +87,219 @@ const mockRecipes = [
 
 const Home = () => {
   const [query, setQuery] = useState('');
-  const [recipes, setRecipes] = useState([]); // Store search results
+  const [recipes, setRecipes] = useState([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const maxProtein = 100;
-  const maxCarbs = 100;
-  const maxFat = 100;
-  const maxCalories = 5000;
-  const [proteinRange, setProteinRange] = useState([0, maxProtein]);
-  const [carbsRange, setCarbsRange] = useState([0, maxCarbs]);
-  const [fatRange, setFatRange] = useState([0, maxFat]);
-  const [caloriesRange, setCaloriesRange] = useState([0, maxCalories]);
+  
+  const [filters, setFilters] = useState([]);
+  const [newFilter, setNewFilter] = useState({
+      type: 'calories',
+      min: '',
+      max: '',
+  });
 
+  const handleDeleteFilter = (index) => {
+    const updatedFilters = filters.filter((_, i) => i !== index);
+    setFilters(updatedFilters);
+  };
+
+  const handleAddFilter = () => {
+      setFilters([...filters, newFilter]);
+      setNewFilter({ type: 'calories', min: '', max: '' });
+  };
+
+  const handleFilterChange = (event) => {
+      setNewFilter({ ...newFilter, [event.target.name]: event.target.value });
+  };
 
   const handleSearch = async () => {
-    if (!query.trim()) return;
-  
-    try {
-      const response = await fetch("http://localhost:5001/recipes/search", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          query,
-          proteinRange,
-          carbsRange,
-          fatRange,
-          caloriesRange,
-        }),
-      });
-  
-      const data = await response.json();
-      console.log("API Response:", data);
-      setRecipes(data);
-    } catch (error) {
-      console.error("Search error:", error);
-      setRecipes([]);
-    }
+      if (!query.trim()) return;
+
+      try {
+          const response = await fetch("http://localhost:5001/recipes/search", {
+              method: "POST",
+              headers: {
+                  "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                  query,
+                  filters,
+              }),
+          });
+
+          if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+          }
+
+          const data = await response.json();
+          console.log("API Response:", data);
+          setRecipes(data);
+      } catch (error) {
+          console.error("Search error:", error);
+          setRecipes([]);
+      }
   };
 
   return (
-    <Flex
-      as="main"
-      direction="column"
-      align="center"
-      textAlign="center"
-      mt={10}
-      p={6}
-      bg="primary.light"
-      color="text.basic"
-      borderRadius="lg"
-    >
-      <Heading size="2xl" color="accent.green" mb={4} fontFamily="heading">
-        Welcome to Elastic Eats
-      </Heading>
-      <Text fontSize="lg" mb={6}>
-        Search for recipes and discover new dishes tailored to your tastes.
-      </Text>
+      <Flex
+          as="main"
+          direction="column"
+          align="center"
+          textAlign="center"
+          mt={10}
+          p={6}
+          bg="primary.light"
+          color="text.basic"
+          borderRadius="lg"
+      >
+          <Heading size="2xl" color="accent.green" mb={4} fontFamily="heading">
+              Welcome to Elastic Eats
+          </Heading>
+          <Text fontSize="lg" mb={6}>
+              Search for recipes and discover new dishes tailored to your tastes.
+          </Text>
 
-
-      <Heading size="md" mt={4}>
-        <Text color='accent.green'>
-            Top Recipes Today
-        </Text>
-      </Heading>
-
-      <Divider my={6} borderColor='text.dark' />
-
-      {/* Recipe Cards Grid */}
-      <Grid
-        templateColumns={{ base: "1fr", sm: "1fr", lg: "repeat(3, 1fr)" }}
-        gap={6}
-        w="100%"
-        maxW="900px"
-        justifyContent="center"
-        justifyItems="center"
-        mx="auto"
-     >
-            {mockRecipes.map((recipe, index) => (
-          <RecipeCard key={index} recipe={recipe} hasNutrition={true}/>
-        ))}
-      </Grid>
-
-      <Divider my={6} borderColor='text.dark' />
-
-      <Heading size="md" my={4}>
-        <Text color='accent.green'>
-            Enter keywords to search for recipes 
-        </Text>
-      </Heading>
-
-      {/* Search Bar */}
-      <VStack spacing={4} mb={6}>
-      
-        <Input
-          placeholder="Search for recipes..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          width="100%"
-          bg="white"
-        />
-        <Button colorScheme="green" onClick={handleSearch}>
-          Search
-        </Button>
-        <Button colorScheme="green" onClick={() => setIsFilterOpen(true)}>
-          Filter
-        </Button>
-        
-      </VStack>
-      
-      {/* Filter */}
-      <Modal isOpen={isFilterOpen} onClose={() => setIsFilterOpen(false)} isCentered>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Filter Nutrition Facts</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <VStack spacing={4} align="stretch">
-
-              {/* Protein Range Slider */}
-              <Box>
-                <Text>Protein: {proteinRange[0]}g - {proteinRange[1]}g</Text>
-                <RangeSlider 
-                  min={0} max={maxProtein} step={1} 
-                  value={proteinRange} 
-                  onChange={setProteinRange}
-                >
-                  <RangeSliderTrack><RangeSliderFilledTrack /></RangeSliderTrack>
-                  <RangeSliderThumb index={0} />
-                  <RangeSliderThumb index={1} />
-                </RangeSlider>
-              </Box>
-
-              {/* Carbs Range Slider */}
-              <Box>
-                <Text>Carbs: {carbsRange[0]}g - {carbsRange[1]}g</Text>
-                <RangeSlider 
-                  min={0} max={maxCarbs} step={1} 
-                  value={carbsRange} 
-                  onChange={setCarbsRange}
-                >
-                  <RangeSliderTrack><RangeSliderFilledTrack /></RangeSliderTrack>
-                  <RangeSliderThumb index={0} />
-                  <RangeSliderThumb index={1} />
-                </RangeSlider>
-              </Box>
-
-              {/* Fat Range Slider */}
-              <Box>
-                <Text>Fat: {fatRange[0]}g - {fatRange[1]}g</Text>
-                <RangeSlider 
-                  min={0} max={maxFat} step={1} 
-                  value={fatRange} 
-                  onChange={setFatRange}
-                >
-                  <RangeSliderTrack><RangeSliderFilledTrack /></RangeSliderTrack>
-                  <RangeSliderThumb index={0} />
-                  <RangeSliderThumb index={1} />
-                </RangeSlider>
-              </Box>
-
-              {/* Calories Range Slider */}
-              <Box>
-                <Text>Calories: {caloriesRange[0]} kcal - {caloriesRange[1]} kcal</Text>
-                <RangeSlider 
-                  min={0} max={maxCalories} step={10} 
-                  value={caloriesRange} 
-                  onChange={setCaloriesRange}
-                >
-                  <RangeSliderTrack><RangeSliderFilledTrack /></RangeSliderTrack>
-                  <RangeSliderThumb index={0} />
-                  <RangeSliderThumb index={1} />
-                </RangeSlider>
-              </Box>
-
-            </VStack>
-          </ModalBody>
-          <ModalFooter>
-            <Button colorScheme="green" onClick={() => setIsFilterOpen(false)}>Apply Filters</Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-
-
-
-
-      {/* Recipe Cards Grid */}
-      {recipes.length > 0 ? (
-        <>
-          <Heading size="md" mt={8} color="accent.green">
-            Search Results
+          <Heading size="md" mt={4}>
+              <Text color='accent.green'>
+                  Top Recipes Today
+              </Text>
           </Heading>
 
           <Divider my={6} borderColor='text.dark' />
 
           <Grid
-            templateColumns={{ base: "1fr", sm: "1fr", lg: "repeat(3, 1fr)" }}
-            gap={6}
-            w="100%"
-            maxW="900px"
-            justifyContent="center"
-            justifyItems="center"
-            mx="auto"
+              templateColumns={{ base: "1fr", sm: "1fr", lg: "repeat(3, 1fr)" }}
+              gap={6}
+              w="100%"
+              maxW="900px"
+              justifyContent="center"
+              justifyItems="center"
+              mx="auto"
           >
-            {recipes.map((recipe, index) => (
-              <RecipeCard key={index} recipe={recipe} hasNutrition={true}/>
-            ))}
+              {mockRecipes.map((recipe, index) => (
+                  <RecipeCard key={index} recipe={recipe} hasNutrition={true} />
+              ))}
           </Grid>
-        </>
-      ) : (
-        <Text fontSize="lg" color="gray.500" mt={6}>
-          No recipes found. Try searching for something else!
-        </Text>
-      )}
-    </Flex>
 
-    
+          <Divider my={6} borderColor='text.dark' />
+
+          <Heading size="md" my={4}>
+              <Text color='accent.green'>
+                  Enter keywords to search for recipes
+              </Text>
+          </Heading>
+
+          <VStack spacing={4} mb={6}>
+              <Input
+                  placeholder="Search for recipes..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  width="100%"
+                  bg="white"
+              />
+              <Button colorScheme="green" onClick={handleSearch}>
+                  Search
+              </Button>
+              <Button colorScheme="green" onClick={() => setIsFilterOpen(true)}>
+                  Filter
+              </Button>
+          </VStack>
+
+          <Modal isOpen={isFilterOpen} onClose={() => setIsFilterOpen(false)} isCentered>
+            <ModalOverlay />
+            <ModalContent>
+                <ModalHeader>Filter Nutrition Facts</ModalHeader>
+                <ModalCloseButton />
+                <ModalBody>
+                    <VStack spacing={4} align="stretch">
+                        <Flex>
+                            <Select name="type" value={newFilter.type} onChange={handleFilterChange} flex="6">
+                                <option value="calories">Calories</option>
+                                <option value="protein_g">Protein</option>
+                                <option value="carbohydrates_total_g">Carbs</option>
+                                <option value="fat_total_g">Fat</option>
+                            </Select>
+                            <Input
+                                type="number"
+                                name="min"
+                                placeholder="Min"
+                                value={newFilter.min}
+                                onChange={handleFilterChange}
+                                flex="3"
+                                ml={2}
+                            />
+                            <Input
+                                type="number"
+                                name="max"
+                                placeholder="Max"
+                                value={newFilter.max}
+                                onChange={handleFilterChange}
+                                flex="3"
+                                ml={2}
+                            />
+                            <Button colorScheme="green" onClick={handleAddFilter} ml={2}>
+                                Add Filter
+                            </Button>
+                        </Flex>
+
+                        {filters.map((filter, index) => (
+                          <Flex 
+                              key={index} 
+                              p={2} 
+                              borderWidth="1px" 
+                              borderRadius="md" 
+                              alignItems="center" 
+                              justifyContent="space-between"
+                          >
+                              <Text>
+                                  {filter.type}: {filter.min || "Any"} - {filter.max || "Any"}
+                              </Text>
+                              <IconButton
+                                  icon={<DeleteIcon />}
+                                  aria-label="Delete filter"
+                                  size="sm"
+                                  onClick={() => handleDeleteFilter(index)}
+                              />
+                          </Flex>
+                      ))}
+                    </VStack>
+                </ModalBody>
+                <ModalFooter>
+                    <Button colorScheme="green" onClick={() => { setIsFilterOpen(false); handleSearch(); }}>
+                        Apply Filters
+                    </Button>
+                </ModalFooter>
+            </ModalContent>
+        </Modal>
+
+          {recipes.length > 0 ? (
+              <>
+                  <Heading size="md" mt={8} color="accent.green">
+                      Search Results
+                  </Heading>
+
+                  <Divider my={6} borderColor='text.dark' />
+
+                  <Grid
+                      templateColumns={{ base: "1fr", sm: "1fr", lg: "repeat(3, 1fr)" }}
+                      gap={6}
+                      w="100%"
+                      maxW="900px"
+                      justifyContent="center"
+                      justifyItems="center"
+                      mx="auto"
+                  >
+                      {recipes.map((recipe, index) => (
+                          <RecipeCard key={index} recipe={recipe} hasNutrition={true} />
+                      ))}
+                  </Grid>
+              </>
+          ) : (
+              <Text fontSize="lg" color="gray.500" mt={6}>
+                  No recipes found. Try searching for something else!
+              </Text>
+          )}
+      </Flex>
   );
 };
 
