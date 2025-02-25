@@ -30,7 +30,7 @@ def adjust_category_weights(user_priority):
     """
 
     try:
-        response = ollama.chat(model="mistral", messages=[{"role": "user", "content": prompt}])
+        response = ollama.chat(model="gemma:2b", messages=[{"role": "user", "content": prompt}])
         parsed_response = json.loads(response["message"]["content"])  # Try parsing as JSON
 
         if isinstance(parsed_response, dict) and all(key in parsed_response for key in ["calories", "protein", "sugar", "carbs", "sodium"]):

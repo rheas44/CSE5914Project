@@ -1,14 +1,53 @@
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
-from sklearn.metrics import classification_report, confusion_matrix
-from graph_model import GAT  # Use GAT instead of GCN
+import matplotlib.pyplot as plt
+from sklearn.metrics import accuracy_score, f1_score, classification_report, confusion_matrix
+from graph_model import GAT, GCN  # ✅ Import both models
 from data_loader import load_recipe_data
 from recipe_modifier import suggest_modifications, adjust_category_weights
 
+def train_model(model, data, labels, model_name):
+    """Train a given model and return metrics."""
+    optimizer = optim.Adam(model.parameters(), lr=0.01)
+    criterion = torch.nn.CrossEntropyLoss()
+
+    loss_history = []
+
+    for epoch in range(200):
+        optimizer.zero_grad()
+        output = model(data.x, data.edge_index)
+
+        if output.shape[0] != labels.shape[0]:  # Safety check
+            print(f"❌ Error: Model output size {output.shape[0]} does not match labels {labels.shape[0]}")
+            return None
+
+        loss = criterion(output, labels)
+        loss.backward()
+        optimizer.step()
+        loss_history.append(loss.item())
+
+        acc = (output.argmax(dim=1) == labels).float().mean().item()
+        print(f"📌 [{model_name}] Epoch {epoch:3d} | Loss: {loss:.4f} | Accuracy: {acc:.4f}")
+
+    print(f"\n✅ {model_name} trained successfully.")
+
+    # Final Predictions
+    preds = output.argmax(dim=1).cpu().numpy()
+    true_labels = labels.cpu().numpy()
+
+    # Compute Accuracy & F1-score
+    accuracy = accuracy_score(true_labels, preds)
+    f1 = f1_score(true_labels, preds, average="weighted")
+
+    print(f"\n📊 **{model_name} Classification Report:**")
+    print(classification_report(true_labels, preds, digits=4))
+
+    return model, accuracy, f1, loss_history
+
 def train():
     # Load Data
-    data = load_recipe_data("data.txt")
+    data, recipe_names = load_recipe_data("data.txt")  # ✅ Ensure names are returned
 
     print("\n🔹 Number of Nodes:", data.x.shape[0])
     print("🔹 Node Features Shape:", data.x.shape)
@@ -19,53 +58,48 @@ def train():
     category_weights = adjust_category_weights(user_priority)
     print(f"🔄 Updated Category Weights: {category_weights}")
 
-    # Extract Features
-    calories = data.x[:, 0]
-    protein = data.x[:, 1]
-    sugar = data.x[:, 2]
-    carbs = data.x[:, 3]
-    sodium = data.x[:, 4]
-
-    # Weighted Health Score Calculation
+    # Compute Health Scores (Including New Macros)
     health_scores = (
-        (calories * category_weights["calories"]) +
-        (protein * category_weights["protein"]) +
-        (sugar * category_weights["sugar"]) +
-        (carbs * category_weights["carbs"]) +
-        (sodium * category_weights["sodium"])
+        (data.x[:, 0] * category_weights["calories"]) +  
+        (data.x[:, 1] * category_weights["protein"]) +
+        (data.x[:, 2] * category_weights["sugar"]) +
+        (data.x[:, 3] * category_weights["carbs"]) +
+        (data.x[:, 4] * category_weights["sodium"]) +
+        (data.x[:, 5] * category_weights.get("fat", 1.0)) +  # ✅ NEW: Total Fat
+        (data.x[:, 6] * category_weights.get("fiber", 1.0)) +  # ✅ NEW: Fiber
+        (data.x[:, 7] * category_weights.get("potassium", 1.0)) +  # ✅ NEW: Potassium
+        (data.x[:, 8] * category_weights.get("cholesterol", 1.0))   # ✅ NEW: Cholesterol
     )
 
-    # Normalize Scores (Avoid divide-by-zero)
+    # Normalize Scores
     min_score, max_score = health_scores.min(), health_scores.max()
     if max_score - min_score > 0:
         health_scores = (health_scores - min_score) / (max_score - min_score)
     else:
         health_scores = torch.zeros_like(health_scores)
 
-    print(f"\n📊 Health Scores - Min: {health_scores.min():.4f}, Max: {health_scores.max():.4f}, Mean: {health_scores.mean():.4f}, Std Dev: {health_scores.std():.4f}")
-
-    # **Determine Adaptive Threshold Based on User Preferences**
-    mean_score = health_scores.mean().item()
-    std_dev = health_scores.std().item()
-    threshold = max(0.2, min(mean_score + (0.25 * std_dev), 0.9))
-
-    # Define Classification Labels
+    threshold = health_scores.mean().item() + (0.25 * health_scores.std().item())
     labels = (health_scores > threshold).long()
 
-    print(f"\n📏 Adaptive Healthiness Threshold: {threshold:.4f}")
+    print(f"\n📏 Adaptive Threshold: {threshold:.4f}")
     print("\n📊 Unique Labels:", torch.unique(labels))
     print("📊 Label Counts:", torch.bincount(labels))
 
-    # 🔹 Get indices for healthy recipes
+    # ✅ Get Healthy Recipes
     healthy_indices = (labels == 0).nonzero(as_tuple=True)[0]
     healthy_recipes = data.x[healthy_indices]
+    healthy_recipe_names = [recipe_names[i] for i in healthy_indices.tolist()]  # ✅ Match recipe names
 
-    # Print healthy recipes
+    # ✅ Show Recipes with Names and New Macros
     print("\n✅ Healthy Recipes:")
-    for i, recipe in enumerate(healthy_recipes):
-        print(f"[{i}] Calories: {recipe[0]:.1f} | Protein: {recipe[1]:.1f}g | Sugar: {recipe[2]:.1f}g | Carbs: {recipe[3]:.1f}g | Sodium: {recipe[4]:.1f}mg")
+    for i, (name, recipe) in enumerate(zip(healthy_recipe_names, healthy_recipes)):
+        print(
+            f"[{i}] {name} | Calories: {recipe[0]:.1f} | Protein: {recipe[1]:.1f}g | Sugar: {recipe[2]:.1f}g | "
+            f"Carbs: {recipe[3]:.1f}g | Sodium: {recipe[4]:.1f}mg | Fat: {recipe[5]:.1f}g | "
+            f"Fiber: {recipe[6]:.1f}g | Potassium: {recipe[7]:.1f}mg | Cholesterol: {recipe[8]:.1f}mg"
+        )
 
-    # Ask the user to select a recipe for modification
+    # ✅ User Chooses a Recipe by Name
     try:
         choice = int(input("\nEnter the number of the recipe you'd like to modify: "))
         if choice < 0 or choice >= len(healthy_recipes):
@@ -74,87 +108,41 @@ def train():
         print(f"⚠️ {e}")
         return
 
-    # Get the selected recipe
     selected_recipe = healthy_recipes[choice]
-    ingredients = data.recipe_ingredients[i] if hasattr(data, "recipe_ingredients") else []
-    macros = {
-        "calories": recipe[0].item(),
-        "protein_g": recipe[1].item(),  # Match expected key
-        "sugar_g": recipe[2].item(),    # Match expected key
-        "carbohydrates_total_g": recipe[3].item(),  # Match expected key
-        "sodium_mg": recipe[4].item()   # Match expected key
-    }
+    selected_recipe_name = healthy_recipe_names[choice]  # ✅ Get name of selected recipe
 
-    # ✅ Call LLM to suggest modifications for the selected recipe
-    modifications = suggest_modifications(selected_recipe, ingredients, macros, user_priority)
-    print(f"\n🛠 Suggested Modifications for Selected Recipe:\n{modifications}")
+    # ✅ Call LLM to suggest modifications
+    modifications = suggest_modifications(selected_recipe_name, selected_recipe, user_priority)
+    print(f"\n🛠 Suggested Modifications for **{selected_recipe_name}**:\n{modifications}")
 
-    # ✅ Filter Data to Only Keep Valid Nodes
-    valid_indices = health_scores.nonzero(as_tuple=True)[0]  # Keep only valid recipes
-    data.x = data.x[valid_indices]
-    labels = labels[valid_indices]  # ✅ Ensure labels match filtered nodes
+    # ✅ Define Models
+    gat_model = GAT(input_dim=9, hidden_dim=8, output_dim=2)  # ✅ Update Input Dim (now 9)
+    gcn_model = GCN(input_dim=9, hidden_dim=8, output_dim=2)  # ✅ Update Input Dim (now 9)
 
-    # ✅ Create mapping from old to new indices
-    old_to_new = {int(old_idx): new_idx for new_idx, old_idx in enumerate(valid_indices.tolist())}
+    # ✅ Train Both Models
+    gat_model, gat_acc, gat_f1, gat_loss = train_model(gat_model, data, labels, "GAT")
+    gcn_model, gcn_acc, gcn_f1, gcn_loss = train_model(gcn_model, data, labels, "GCN")
 
-    # ✅ Remap the edge index using the updated node mapping
-    mask = torch.tensor(
-        [(src in old_to_new and dst in old_to_new) for src, dst in data.edge_index.t().tolist()],
-        dtype=torch.bool
-    )
-    data.edge_index = data.edge_index[:, mask]  # Remove edges not in valid_indices
+    # ✅ Compare Performance
+    print("\n🔎 **Performance Comparison:**")
+    print(f"GAT Accuracy: {gat_acc:.4f} | GCN Accuracy: {gcn_acc:.4f}")
+    print(f"GAT F1-Score: {gat_f1:.4f} | GCN F1-Score: {gcn_f1:.4f}")
 
-    # ✅ Convert old indices to new ones
-    data.edge_index = torch.tensor(
-        [[old_to_new[src.item()], old_to_new[dst.item()]] for src, dst in data.edge_index.t()],
-        dtype=torch.long
-    ).t().contiguous()
+    # ✅ Plot Loss Curves
+    plt.figure(figsize=(10, 5))
+    plt.plot(gat_loss, label="GAT Loss")
+    plt.plot(gcn_loss, label="GCN Loss", linestyle="dashed")
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.title("Training Loss: GAT vs GCN")
+    plt.legend()
+    plt.show()
 
-    print("✅ Edge index successfully remapped!")
-
-    # ✅ Handle Class Imbalance
-    class_counts = torch.bincount(labels, minlength=2).float()
-    class_weights = torch.log(1.0 + (1.0 / (class_counts + 1e-6)))
-    class_weights /= class_weights.sum()
-    print("\n⚖️ Class Weights:", class_weights)
-
-    # ✅ Define Model
-    model = GAT(input_dim=5, hidden_dim=8, output_dim=2)
-    optimizer = optim.Adam(model.parameters(), lr=0.01)
-    criterion = torch.nn.CrossEntropyLoss(weight=class_weights.to(torch.float32))
-
-    # ✅ Training Loop
-    for epoch in range(200):
-        optimizer.zero_grad()
-        output = model(data.x, data.edge_index)
-        
-        # ✅ Ensure batch sizes match
-        if output.shape[0] != labels.shape[0]:
-            print(f"❌ Error: Model output size {output.shape[0]} does not match labels {labels.shape[0]}")
-            return
-
-        loss = criterion(output, labels)
-        loss.backward()
-        optimizer.step()
-
-        acc = (output.argmax(dim=1) == labels).float().mean().item()
-        print(f"📌 Epoch {epoch:3d} | Loss: {loss:.4f} | Accuracy: {acc:.4f}")
-
-    print("\n✅ Model trained successfully.")
-
-    # ✅ Evaluation
-    preds = output.argmax(dim=1).cpu().numpy()
-    true_labels = labels.cpu().numpy()
-    print("\n📊 **Classification Report:**")
-    print(classification_report(true_labels, preds, digits=4))
-    print("\n🧩 **Confusion Matrix:**")
-    print(confusion_matrix(true_labels, preds))
-
-    return model, data
+    return gat_model, gcn_model, data
 
 if __name__ == '__main__':
     try:
-        trained_model, graph_data = train()
+        trained_gat, trained_gcn, graph_data = train()
     except Exception as e:
         print(f"❌ Error: {e}")
     finally:
