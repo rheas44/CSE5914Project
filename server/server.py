@@ -91,6 +91,8 @@ def login():
     username = data.get("username")
     password = data.get("password")
 
+    print(username, password)
+
     if not username or not password:
         return jsonify({"error": "Username and password are required"}), 400
 
@@ -100,7 +102,7 @@ def login():
             "bool": {
                 "must": [
                     {"match": {"username": username}},  # Assuming username is indexed
-                    {"term": {"password": password}}  # Using term query for exact match
+                    {"match": {"password": password}}  # Using term query for exact match
                 ]
             }
         }
