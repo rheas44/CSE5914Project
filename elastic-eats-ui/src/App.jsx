@@ -7,6 +7,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from "./pages/home";
 import { useEffect } from "react";
 import Signup from './pages/signup';
+import Pantry from './pages/pantry';
 import { UserProvider } from "./components/UserContext";
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/signup" element={<Signup />} />
+              <Route path="/pantry" element={<Pantry/>} />
             </Routes>
           </Flex>
 
