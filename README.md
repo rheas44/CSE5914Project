@@ -65,3 +65,10 @@ Important: The frontend (React) and backend (Flask) must be run in separate term
    ```p5FE3c=alPhGd20o14bx```
 8. Exit:
    ```exit```
+
+### Dump data into Elasticsearch
+
+1. Install elasticdump:
+   ```npm install -g elasticdump```
+2. Dump recipes:
+   ```elasticdump --input=recipes_index.json --output=http://elastic:p5FE3c=alPhGd20o14bx@localhost:9200/recipe_box --type=data --debug```
