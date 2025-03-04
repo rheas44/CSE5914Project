@@ -8,14 +8,14 @@ const mockRecipes = [
     title: "Grilled Chicken Salad",
     labels: ["Chicken", "Salad"],
     rating: 0,
-    ingredients: {
-      "Mixed Greens": { qty: 2, unit: "cups" },
-      "Cherry Tomatoes": { qty: 0.5, unit: "cup" },
-      "Sliced Cucumber": { qty: 0.25, unit: "cup" },
-      "Crumbled Feta Cheese": { qty: 0.25, unit: "cup" },
-      "Grilled Chicken Breast": { qty: 1, unit: "piece" },
-      "Balsamic Vinaigrette": { qty: 2, unit: "tbsp" }
-    },
+    ingredients: [
+      {name: "Mixed Greens", qty: 2, unit: "cups" },
+      {name: "Cherry Tomatoes", qty: 0.5, unit: "cup" },
+      {name: "Sliced Cucumber", qty: 0.25, unit: "cup" },
+      {name: "Crumbled Feta Cheese", qty: 0.25, unit: "cup" },
+      {name: "Grilled Chicken Breast", qty: 1, unit: "piece" },
+      {name: "Balsamic Vinaigrette", qty: 2, unit: "tbsp" }
+    ],
     macros: {
       calories: 350,
       fat_total_g: 12,
@@ -35,13 +35,13 @@ const mockRecipes = [
     title: "Salmon with Quinoa",
     labels: ["Fish", "Healthy"],
     rating: 0,
-    ingredients: {
-      "Salmon Fillet": { qty: 1, unit: "piece" },
-      "Quinoa": { qty: 0.5, unit: "cup" },
-      "Steamed Broccoli": { qty: 1, unit: "cup" },
-      "Olive Oil": { qty: 1, unit: "tbsp" },
-      "Lemon Juice": { qty: 1, unit: "tsp" }
-    },
+    ingredients: [
+      {name: "Salmon Fillet", qty: 1, unit: "piece" },
+      {name: "Quinoa", qty: 0.5, unit: "cup" },
+      {name: "Steamed Broccoli", qty: 1, unit: "cup" },
+      {name: "Olive Oil", qty: 1, unit: "tbsp" },
+      {name: "Lemon Juice", qty: 1, unit: "tsp" }
+    ],
     macros: {
       calories: 500,
       fat_total_g: 18,
@@ -59,14 +59,14 @@ const mockRecipes = [
     title: "Vegetable Stir Fry",
     labels: ["Vegetarian", "Quick Meal"],
     rating: 0,
-    ingredients: {
-      "Mixed Bell Peppers": { qty: 1, unit: "cup" },
-      "Sliced Carrots": { qty: 0.5, unit: "cup" },
-      "Snap Peas": { qty: 0.5, unit: "cup" },
-      "Tofu or Chicken": { qty: 0.5, unit: "cup" },
-      "Soy Sauce": { qty: 2, unit: "tbsp" },
-      "Sesame Oil": { qty: 1, unit: "tsp" }
-    },
+    ingredients: [
+      {name: "Mixed Bell Peppers", qty: 1, unit: "cup" },
+      {name: "Sliced Carrots",  qty: 0.5, unit: "cup" },
+      {name: "Snap Peas",  qty: 0.5, unit: "cup" },
+      {name: "Tofu or Chicken", qty: 0.5, unit: "cup" },
+      {name: "Soy Sauce",  qty: 2, unit: "tbsp" },
+      {name: "Sesame Oil",  qty: 1, unit: "tsp" }
+    ],
     macros: {
       calories: 400,
       fat_total_g: 10,
@@ -186,7 +186,7 @@ const Home = () => {
             mx="auto"
           >
             {recipes.map((recipe, index) => (
-              <RecipeCard key={index} recipe={recipe} hasNutrition={false}/>
+              <RecipeCard key={index} recipe={recipe} hasNutrition={true}/>
             ))}
           </Grid>
         </>

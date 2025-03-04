@@ -1,0 +1,3 @@
+{"_index":"users","_id":"user1@example.com","_score":1,"_routing":"user1@example.com","_source":{"username":"user1","email":"user1@example.com","first_name":"John","last_name":"Doe","password":"password1"}}
+{"_index":"users","_id":"user2@example.com","_score":1,"_routing":"user2@example.com","_source":{"username":"user2","email":"user2@example.com","first_name":"Jane","last_name":"Doe","password":"password2"}}
+{"_index":"users","_id":"user3@example.com","_score":1,"_routing":"user3@example.com","_source":{"username":"user3","email":"user3@example.com","first_name":"John","last_name":"Smith","password":"password3"}}
