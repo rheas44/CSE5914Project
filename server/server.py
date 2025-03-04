@@ -82,6 +82,32 @@ def search_recipes():
 
     return jsonify(recipes)
 
+@app.route('/pantry', methods=['GET'])
+def get_pantry():
+    user_id = request.args.get("user_id")
+
+    if not user_id:
+        return jsonify({"error": "No search user_id provided"}), 400
+
+    # Search in Elasticsearch
+    es_query = {
+        "query": {
+            "match": {
+                "user_id": user_id  
+            }
+        }
+    }
+
+    try:
+        results = es.search(index="pantry", body=es_query)
+        pantry_list = results["hits"]['hits'][0]['_source']['items']
+        print(pantry_list)
+    except Exception as e:
+        print("Error querying Elasticsearch:", e)
+        return jsonify({"error": "Elasticsearch Error"}), 400
+
+    return jsonify({ "pantry": pantry_list }), 200
+
 def hash_email(email):
     return hashpw(email.encode('utf-8'), gensalt()).decode('utf-8')
 
@@ -100,7 +126,7 @@ def login():
             "bool": {
                 "must": [
                     {"match": {"username": username}},  # Assuming username is indexed
-                    {"term": {"password": password}}  # Using term query for exact match
+                    {"match": {"password": password}}  # Using term query for exact match
                 ]
             }
         }
