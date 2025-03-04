@@ -104,8 +104,11 @@ const Home = () => {
     };
 
     const handleSaveFilter = () => {
-        if (newFilter.min < 0 || newFilter.max < 0 || newFilter.min === '' || newFilter.max === '') {
+        if (newFilter.min < 0 || newFilter.max < 0) {
             alert("Please enter valid positive numbers for min and max values.");
+            return;
+        } else if (newFilter.min === '' || newFilter.max === '') {
+            alert("Please enter numerical values for min and max values.");
             return;
         }
     
