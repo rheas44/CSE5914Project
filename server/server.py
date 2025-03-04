@@ -101,8 +101,8 @@ def login():
         "query": {
             "bool": {
                 "must": [
-                    {"match": {"username": username}},  # Assuming username is indexed
-                    {"match": {"password": password}}  # Using term query for exact match
+                    {"term": {"username": username}},  # Assuming username is indexed
+                    {"term": {"password": password}}  # Using term query for exact match
                 ]
             }
         }
