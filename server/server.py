@@ -3,7 +3,8 @@ from elasticsearch import Elasticsearch
 import os
 from dotenv import load_dotenv
 import requests
-from flask_cors import CORS  # Enable CORS to allow frontend access
+from flask_cors import CORS 
+from bcrypt import hashpw, gensalt
 
 # Load environment variables
 load_dotenv()
@@ -132,12 +133,16 @@ def search_recipes():
         print("Error processing request:", e)
         return jsonify({"error": "An error occurred"}), 500
 
+def hash_email(email):
+    return hashpw(email.encode('utf-8'), gensalt()).decode('utf-8')
+
 @app.route('/login', methods=['POST'])
 def login():
-    """Handle user login requests."""
     data = request.get_json()
     username = data.get("username")
     password = data.get("password")
+
+    print(username, password)
 
     if not username or not password:
         return jsonify({"error": "Username and password are required"}), 400
@@ -147,7 +152,8 @@ def login():
         "query": {
             "bool": {
                 "must": [
-                    {"match": {"username": username}},  # Assuming username is indexed
+                    {"term": {"username": username}},  # Assuming username is indexed
+                    {"term": {"password": password}}  # Using term query for exact match
                 ]
             }
         }
@@ -156,12 +162,71 @@ def login():
     try:
         results = es.search(index="users", body=es_query)  # Assuming users are stored in 'users' index
         if results["hits"]["total"]["value"] > 0:
-            return jsonify({"message": "Login successful!"}), 200
+            user_email = results["hits"]['hits'][0]['_source']['email']
+            # Assuming there's a function to hash the email
+            hashed_email = hash_email(user_email)
+            return jsonify({"message": "Login successful!", "user_id": hashed_email}), 200
         else:
             return jsonify({"error": "Invalid username or password"}), 401
     except Exception as e:
         print("Error querying Elasticsearch:", e)
         return jsonify({"error": "Internal server error"}), 500
+    
+@app.route('/signup', methods=['POST'])
+def signup():
+    """Handle user login requests."""
+    data = request.get_json()
+    username = data.get("username")
+    password = data.get("password")
+    firstName = data.get("firstName")
+    lastName = data.get("lastName")
+    email = data.get("email")
 
+    if not username or not password or not firstName or not lastName or not email:
+        return jsonify({"error": "All fields are required"}), 400
+
+    # Check if the email is already in the 'users' index
+    es_query = {
+        "query": {
+            "bool": {
+                "must": [
+                    {"term": {"email": email}}  # Using term query for exact match
+                ]
+            }
+        }
+    }
+
+    try:
+        results = es.search(index="users", body=es_query)  # Assuming users are stored in 'users' index
+        if results["hits"]["total"]["value"] > 0:
+            return jsonify({"error": "Email already in use"}), 400
+    except Exception as e:
+        print("Error querying Elasticsearch:", e)
+        return jsonify({"error": "Internal server error"}), 500
+    
+    # Assuming the user data is stored in a dictionary 'user_data'
+    user_data = {
+        "username": username,
+        "email": email,
+        "first_name": firstName,
+        "last_name": lastName,
+        "password": password  # Store password securely
+    }
+    
+    try:
+        es.index(index='users', id=user_data['email'], document=user_data, routing=user_data['email'])  # Adding the user to the 'users' index
+
+        new_pantry = {
+            "user_id": hash_email(email),
+            "items": []
+        }
+
+        es.index(index='pantry', document=new_pantry)
+
+        return jsonify({"message": "User registered successfully!"}), 201
+    except Exception as e:
+        print("Error adding user to Elasticsearch:", e)
+        return jsonify({"error": "Internal server error"}), 500
+        
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001)

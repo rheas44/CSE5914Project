@@ -1,9 +1,11 @@
 import { 
     Box, Text, Flex, Modal, ModalOverlay, 
-    ModalContent, ModalCloseButton, ModalBody, Input, Button
+    ModalContent, ModalCloseButton, ModalBody, Input, Button, Link
   } from "@chakra-ui/react";
   import { motion } from "framer-motion";
   import { useState } from 'react';
+  import { Link as RouterLink, useNavigate } from 'react-router-dom';
+  import { useUser } from "./UserContext";
   
   const MotionBox = motion.create(Box);
   
@@ -11,6 +13,8 @@ import {
 
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const navigate = useNavigate();
+    const { setUser } = useUser();
 
     const handleLogin = async () => {
         if (!username.trim() || !password.trim()) return;
@@ -25,7 +29,20 @@ import {
             });
             const data = await response.json();
             
-            console.log("Login Successful!", data);
+            if (response.status === 400) {
+                console.error("Login error:", data.error);
+                document.getElementById('error').innerText = `${data.error}`;
+            } else if (response.status === 401) {
+                console.error("Login error:", data.error);
+                document.getElementById('error').innerText = `${data.error}`;
+            }
+        
+            if (data.message) {
+                console.log("Login Successful!", data.message); 
+                setUser({ username: username, user_id: data.user_id });
+                onClose(); 
+                navigate("/");              
+            }
         } catch (error) {
             console.error('Login error:', error);
         }
@@ -41,7 +58,8 @@ import {
             <ModalBody>
               <Flex direction="column" align="center">
                 <Text fontSize="xl" color="accent.green" fontWeight="bold">Sign in to Your Account</Text>
-                <Text fontSize="sm" mt={2}>Don't have an account? Sign up here.</Text>
+                <Text fontSize="sm" mt={2}>Don't have an account? <Link as={RouterLink} to="/signup" color="accent.green" onClick={onClose}>Sign up here.</Link></Text>
+                <Text id="error" color="red.500" fontSize="sm"></Text>
               </Flex>
               <Box mt={4} />
               <Flex direction="column" gap={4}>
