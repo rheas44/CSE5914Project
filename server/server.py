@@ -5,6 +5,10 @@ from dotenv import load_dotenv
 import requests
 from flask_cors import CORS 
 from bcrypt import hashpw, gensalt
+import signal
+import subprocess
+import sys
+import time
 
 # Load environment variables
 load_dotenv()
@@ -16,17 +20,6 @@ ES_USER = "elastic"
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend communication
-
-# Initialize Elasticsearch client
-es = Elasticsearch(ES_HOST, basic_auth=(ES_USER, ES_PASS))
-# Connect to Elasticsearch
-try:
-    if es.ping():
-        print("This is server.py: Successfully connected to Elasticsearch!")
-    else:
-        print("Failed to connect to Elasticsearch.")
-except Exception as e:
-    print(f"Error connecting to Elasticsearch: {e}")
 
 def fetch_recipes(query):
     """Fetch recipes from API-Ninjas and return JSON response."""
@@ -201,5 +194,68 @@ def signup():
         print("Error adding user to Elasticsearch:", e)
         return jsonify({"error": "Internal server error"}), 500
         
+# Add this function to execute the shell script
+def run_elastic_dump():
+    try:
+        result = subprocess.run(['sh', '/app/ES_data/elasticdump.sh'], 
+                              capture_output=True,
+                              text=True,
+                              check=True)
+        return True
+    except subprocess.CalledProcessError as e:
+        print("Error running elastic dump:", e)
+        print("Error output:", e.stderr)
+        return False
+    
+def create_es_client():
+    """Create an Elasticsearch client with retries."""
+    es = Elasticsearch(ES_HOST, basic_auth=(ES_USER, ES_PASS))
+    
+    # Keep trying to ping Elasticsearch until successful or 5 second timeout
+    start_time = time.time()
+    while time.time() - start_time < 10:
+        try:
+            if es.ping():
+                print("This is server.py: Successfully connected to Elasticsearch!")
+
+                if run_elastic_dump():
+                    print("Initial data load completed")
+                else:
+                    print("Warning: Initial data load failed")
+
+                return es
+        except Exception as e:
+            print(f"Error connecting to Elasticsearch: {e}")
+            time.sleep(1)  # Wait a bit before trying again
+    print("Failed to connect to Elasticsearch within 10 seconds.")
+    return None  # Return None if connection fails
+
+def cleanup():
+    """Function to run cleanup tasks before exiting."""
+    print("Running cleanup script...")
+    try:
+        result = subprocess.run(['sh', '/ES_data/update_json.sh'], 
+                                capture_output=True,
+                                text=True,
+                                check=True)
+        print("Cleanup script executed successfully.")
+        with open('./test.txt', 'w') as file:
+            file.write("Output: " + result.stdout)
+    except subprocess.CalledProcessError as e:
+        print("Error running cleanup script:", e)
+        print("Error output:", e.stderr)
+
+def signal_handler(sig, frame):
+    """Handle termination signals."""
+    cleanup()
+    sys.exit(0)
+
+# Add SIGINT to the signal handling
+signal.signal(signal.SIGTERM, signal_handler)
+signal.signal(signal.SIGINT, signal_handler)  
+
+es = create_es_client()
+
 if __name__ == '__main__':
+        
     app.run(debug=True, host='0.0.0.0', port=5001)

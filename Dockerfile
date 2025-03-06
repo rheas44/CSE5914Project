@@ -18,8 +18,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy project files
 COPY . /app/
 
-# Set entrypoint
-#ENTRYPOINT ["/app/wait-for-elasticsearch.sh"]
-
 # Default command
 CMD ["python", "server.py", "runserver", "0.0.0.0:8000"]
