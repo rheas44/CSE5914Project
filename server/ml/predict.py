@@ -8,5 +8,5 @@ def predict(model):
     print('Mock Predictions:', output)
 
 if __name__ == '__main__':
-    trained_model = train()
-    predict(trained_model)
+    trained_gat, trained_gcn = train()
+    predict(trained_gat) 

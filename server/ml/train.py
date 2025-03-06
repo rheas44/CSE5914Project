@@ -63,7 +63,7 @@ def train():
     # Print healthy recipes
     print("\n✅ Healthy Recipes:")
     for i, recipe in enumerate(healthy_recipes):
-        print(f"[{i}] Calories: {recipe[0]:.1f} | Protein: {recipe[1]:.1f}g | Sugar: {recipe[2]:.1f}g | Carbs: {recipe[3]:.1f}g | Sodium: {recipe[4]:.1f}mg")
+        print(f"[{i}] {data.recipe_names[healthy_indices[i]]} | Calories: {recipe[0]:.1f} | Protein: {recipe[1]:.1f}g | Sugar: {recipe[2]:.1f}g | Carbs: {recipe[3]:.1f}g | Sodium: {recipe[4]:.1f}mg")
 
     # Ask the user to select a recipe for modification
     try:
