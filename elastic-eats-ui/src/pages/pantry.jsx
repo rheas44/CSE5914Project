@@ -1,62 +1,108 @@
-import { Box, Heading, Text, Divider} from '@chakra-ui/react';
+import { useState, useEffect } from 'react';
+import { 
+  Box, Text, Input, Button, Image, VStack, HStack, 
+  IconButton, useToast, Flex 
+} from '@chakra-ui/react';
+import { DeleteIcon } from '@chakra-ui/icons';
 import { useUser } from "../components/UserContext";
+import LoginCard from "../components/login-card";
 
 const Pantry = () => {
-    const { user } = useUser();
+  const { user } = useUser();
+  const [loginModalOpen, setLoginModalOpen] = useState(true); // Start with login modal open
+  const [pantryItems, setPantryItems] = useState([]);
+  const [newItem, setNewItem] = useState({ name: '', quantity: '', expirationDate: '' });
+  const toast = useToast();
 
-    const handleSubmit = async (event) => {
-        try {
-            const response = await fetch(`http://localhost:5001/pantry`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ user_id: user.user_id }),
-            });
-            const data = await response.json();
-    
-            if (response.status === 400) {
-              console.error("Pantry Retrival error:", data.error);
-              document.getElementById('error').innerText = `${data.error}`;
-            }
-        
-            if (data.message) {
-                console.log("Signup Successful!", data.message);
-                setSuccessSignup(true); // Set successSignup to true if signup is successful
-            }
-        } catch (error) {
-            console.error('Login error:', error);
-        }
-    };
+  useEffect(() => {
+    if (user.username) {
+      setLoginModalOpen(false); // Close modal when user logs in
+    }
+  }, [user]);
 
-    return (
-        user.username ? (
-            <Box maxW="600px" mx="auto" textAlign="center" p={6}>
-                <Heading size="2xl" color="accent.green" mb={4}>
-                    Personal Pantry
-                </Heading>
-                <Text fontSize="lg" color="text.dark" mb={6}>
-                    Welcome to your perosnal pantry! Keep track of all your ingredients here.
-                </Text>
-                <Divider my={6} />
-                <Text id="error" color="red.500" fontSize="sm"></Text>
+  const handleAddItem = () => {
+    if (!newItem.name || !newItem.quantity || !newItem.expirationDate) {
+      toast({
+        title: 'Incomplete information',
+        description: 'Please fill out all fields.',
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+    setPantryItems([...pantryItems, newItem]);
+    setNewItem({ name: '', quantity: '', expirationDate: '' });
+  };
 
-                            
-            </Box>
-        ) : (
-            <Box maxW="600px" mx="auto" textAlign="center" p={6}>
-                <Heading size="2xl" color="accent.green" mb={4}>
-                    Personal Pantry
-                </Heading>
+  const handleRemoveItem = (index) => {
+    const updatedItems = pantryItems.filter((_, i) => i !== index);
+    setPantryItems(updatedItems);
+  };
 
-                <Divider my={6} />
+  return (
+    <Box maxW="800px" mx="auto" mt={8} p={4}>
+      {/* Show login modal if the user is not signed in and hasn't closed it */}
+      <LoginCard isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} />
 
-                <Text fontSize="lg" color="text.dark" mb={6}>
-                    Login in to view your personal pantry.
-                </Text>
-            </Box>
-        )
-    );
+      {!user.username && !loginModalOpen ? (
+        <VStack spacing={4} mt={8}>
+          <Text fontSize="3xl" color="black">
+            Please sign in to view your pantry.
+          </Text>
+        </VStack>
+      ) : (
+        <>
+          {/* Pantry UI */}
+          <Text fontSize="2xl" mb={4} textAlign="center" fontWeight="bold">Your Pantry</Text>
+
+          {/* Input for adding new items */}
+          <VStack spacing={4} mb={8} align="stretch">
+            <Flex gap={2}>
+              <Input
+                placeholder="Item Name"
+                value={newItem.name}
+                onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+              />
+              <Input
+                placeholder="Quantity"
+                value={newItem.quantity}
+                onChange={(e) => setNewItem({ ...newItem, quantity: e.target.value })}
+              />
+              <Input
+                type="date"
+                value={newItem.expirationDate}
+                onChange={(e) => setNewItem({ ...newItem, expirationDate: e.target.value })}
+              />
+              <Button colorScheme="green" onClick={handleAddItem}>Add</Button>
+            </Flex>
+          </VStack>
+
+          {/* Pantry Items Display */}
+          <VStack spacing={4} align="stretch">
+            {pantryItems.length === 0 ? (
+              <Text textAlign="center" fontSize="lg" color="gray.500">
+                Your pantry is empty. Start adding items!
+              </Text>
+            ) : (
+              pantryItems.map((item, index) => (
+                <HStack key={index} w="100%" p={4} borderWidth="1px" borderRadius="md" justifyContent="space-between">
+                  <Text flex="1" ml={4} fontWeight="bold">{item.name}</Text>
+                  <Text>{item.quantity}</Text>
+                  <Text>{new Date(item.expirationDate).toLocaleDateString()}</Text>
+                  <IconButton
+                    icon={<DeleteIcon />}
+                    colorScheme="red"
+                    onClick={() => handleRemoveItem(index)}
+                  />
+                </HStack>
+              ))
+            )}
+          </VStack>
+        </>
+      )}
+    </Box>
+  );
 };
 
 export default Pantry;
