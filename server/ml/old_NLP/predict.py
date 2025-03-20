@@ -1,5 +1,5 @@
-from train import train
-from data_loader import load_recipe_graph
+from server.ml.old_NLP.train import train
+from server.ml.old_NLP.data_loader import load_recipe_graph
 
 # predict.py - Mock inference
 def predict(model):

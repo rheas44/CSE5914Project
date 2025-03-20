@@ -2,106 +2,152 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 from sklearn.metrics import classification_report, confusion_matrix
-from graph_model import GAT
+from graph_model import GCN, GAT
 from data_loader import load_recipe_graph
 from recipe_modifier import suggest_modifications, adjust_category_weights
+import numpy as np
 
-# FDA reference values for denormalization
+# FDA values for denormalization (must match those in data_loader)
 FDA_VALUES = {
-    "calories": 2000,   # kcal
-    "protein": 50,      # g
-    "sugar": 50,        # g
-    "carbs": 275,       # g
-    "sodium": 2300      # mg
+    "calories": 2000,
+    "total_fat": 70,
+    "saturated_fat": 20,
+    "cholesterol": 300,
+    "sodium": 2300,
+    "total_carbs": 275,
+    "fiber": 28,
+    "sugar": 50,
+    "protein": 50
 }
 
-# 🚨 **Hard Filter: Max Calories Allowed**
-MAX_CALORIES = 2000  
+def train_model(model, data, labels, num_recipes, epochs=100, lr=0.01):
+    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=5e-4)
+    model.train()
+    for epoch in range(epochs):
+        optimizer.zero_grad()
+        out = model(data.x, data.edge_index)
+        # Only compute loss on recipe nodes
+        loss = F.cross_entropy(out[:num_recipes], labels)
+        loss.backward()
+        optimizer.step()
+        if epoch % 10 == 0:
+            print(f"Epoch {epoch}: Loss {loss.item():.4f}")
+    return model
 
 def train():
-    # Load Data
-    data = load_recipe_graph("data.txt")
-
-    print("\n Number of Recipes (Before Filtering):", data.x.shape[0])
+    data = load_recipe_graph("final_recipes_v2.json")
+    num_recipes = data.num_recipes
+    print("\nNumber of Recipes:", num_recipes)
     
-    # **Denormalize Calories to Apply Hard Filter**
-    actual_calories = data.x[:, 0] * FDA_VALUES["calories"]
-    valid_indices = (actual_calories <= MAX_CALORIES).nonzero(as_tuple=True)[0]  # Keep only valid recipes
-
-    # **Filter Data**
-    data.x = data.x[valid_indices]
-    data.recipe_names = [data.recipe_names[i] for i in valid_indices]
-    
-    print(" Number of Recipes (After Filtering ≤ 2000 kcal):", data.x.shape[0])
-
-    # User Preference Input
+    # Obtain user health priority and adjust category weights via the LLM-based modifier
     user_priority = input("Enter your health priority (e.g., 'low sugar, high protein'): ").strip().lower()
     category_weights = adjust_category_weights(user_priority)
+    # Ensure calories are penalized if necessary
+    if category_weights.get("calories", 0) > 0:
+        category_weights["calories"] *= -1
+    print(f"Adjusted Category Weights: {category_weights}")
     
-    # 🚨 **Manually Ensure Calories Are Penalized**
-    if category_weights["calories"] > 0:
-        category_weights["calories"] *= -1  
-
-    print(f" Adjusted Category Weights: {category_weights}")
-
-    # Extract Features & Compute Health Scores
-    health_scores = (
-        data.x[:, 0] * category_weights["calories"] +  
-        data.x[:, 1] * category_weights["protein"] +  
-        data.x[:, 2] * category_weights["sugar"] +  
-        data.x[:, 3] * category_weights["carbs"] +  
-        data.x[:, 4] * category_weights["sodium"]  
-    )
-
-    # Normalize Scores
-    min_score, max_score = health_scores.min(), health_scores.max()
-    if max_score - min_score > 0:
-        health_scores = (health_scores - min_score) / (max_score - min_score)
-    else:
-        health_scores = torch.zeros_like(health_scores)
-
-    print(f"\n Health Scores - Min: {health_scores.min():.4f}, Max: {health_scores.max():.4f}, Mean: {health_scores.mean():.4f}, Std Dev: {health_scores.std():.4f}")
-
-    # **Sort & Get Top 10 Healthiest Recipes**
-    top_10_indices = torch.argsort(health_scores, descending=True)[:10]
-
-    print("\n **Top 10 Healthiest Recipes (≤ 2000 kcal):**")
-    for i, idx in enumerate(top_10_indices):
-        cal   = data.x[idx, 0].item() * FDA_VALUES["calories"]
-        prot  = data.x[idx, 1].item() * FDA_VALUES["protein"]
-        sug   = data.x[idx, 2].item() * FDA_VALUES["sugar"]
-        carb  = data.x[idx, 3].item() * FDA_VALUES["carbs"]
-        sod   = data.x[idx, 4].item() * FDA_VALUES["sodium"]
-        
-        print(f"[{i+1}] {data.recipe_names[idx]}")
-        print(f"    Calories: {cal:.1f} kcal | Protein: {prot:.1f}g | Sugar: {sug:.1f}g | Carbs: {carb:.1f}g | Sodium: {sod:.1f}mg")
-
-    # **Ask the User to Select a Recipe for Modification**
+    # Our node features (first num_recipes nodes) are in order:
+    # [calories, total_fat, saturated_fat, cholesterol, sodium, total_carbs, fiber, sugar, protein]
+    weights = torch.tensor([
+        category_weights.get("calories", 0),
+        category_weights.get("total fat", 0),
+        category_weights.get("saturated fat", 0),
+        category_weights.get("cholesterol", 0),
+        category_weights.get("sodium", 0),
+        category_weights.get("total carbs", 0),
+        category_weights.get("fiber", 0),
+        category_weights.get("sugar", 0),
+        category_weights.get("protein", 0)
+    ], dtype=torch.float)
+    
+    # Compute composite health scores for recipe nodes only
+    recipe_health_scores = (data.x[:num_recipes] * weights).sum(dim=1)
+    median_score = recipe_health_scores.median()
+    labels = (recipe_health_scores > median_score).long()
+    print(f"Label distribution: {torch.bincount(labels)}")
+    
+    # Split recipe nodes into training and test sets (80/20 split)
+    num_nodes = num_recipes
+    indices = torch.randperm(num_nodes)
+    split = int(0.8 * num_nodes)
+    train_idx = indices[:split]
+    test_idx = indices[split:]
+    train_mask = torch.zeros(num_nodes, dtype=torch.bool)
+    test_mask = torch.zeros(num_nodes, dtype=torch.bool)
+    train_mask[train_idx] = True
+    test_mask[test_idx] = True
+    # Save masks in data (for recipes only)
+    data.train_mask = train_mask
+    data.test_mask = test_mask
+    
+    num_features = data.x.shape[1]
+    num_classes = 2  # healthy vs. not healthy
+    
+    # --- Train GCN model ---
+    print("\nTraining GCN model...")
+    gcn_model = GCN(num_features, hidden_channels=16, num_classes=num_classes)
+    gcn_model = train_model(gcn_model, data, labels, num_recipes, epochs=100, lr=0.01)
+    gcn_model.eval()
+    out = gcn_model(data.x, data.edge_index)
+    preds = out[:num_recipes].argmax(dim=1)
+    
+    # Evaluate GCN on the test set
+    test_labels = labels[test_mask].cpu().numpy()
+    test_preds = preds[test_mask].cpu().numpy()
+    print("\nGCN Model Evaluation on Test Set:")
+    print(classification_report(test_labels, test_preds, digits=4))
+    print("Confusion Matrix:")
+    print(confusion_matrix(test_labels, test_preds))
+    
+    # --- Train GAT model ---
+    print("\nTraining GAT model...")
+    gat_model = GAT(num_features, hidden_channels=16, num_classes=num_classes, heads=4)
+    gat_model = train_model(gat_model, data, labels, num_recipes, epochs=100, lr=0.005)
+    gat_model.eval()
+    out_gat = gat_model(data.x, data.edge_index)
+    preds_gat = out_gat[:num_recipes].argmax(dim=1)
+    test_preds_gat = preds_gat[test_mask].cpu().numpy()
+    print("\nGAT Model Evaluation on Test Set:")
+    print(classification_report(test_labels, test_preds_gat, digits=4))
+    print("Confusion Matrix:")
+    print(confusion_matrix(test_labels, test_preds_gat))
+    
+    # List healthy recipes from the test set (GAT predictions)
+    print("\nHealthy recipes from test set (GAT):")
+    healthy_indices = (preds_gat == 1).nonzero(as_tuple=True)[0]
+    for i in healthy_indices:
+        if i in test_idx:
+            print(f"Recipe {i}: {data.recipe_names[i]}")
+    
+    # Let the user select a recipe (by index among recipe nodes) for LLM-based modification suggestion
     try:
-        choice = int(input("\nEnter the number of the recipe you'd like to modify (1-10): ")) - 1
-        if choice < 0 or choice >= 10:
-            raise ValueError("Invalid selection. Please choose a valid number.")
+        choice = int(input("\nEnter the index of the recipe you'd like to modify (from the above list): "))
     except ValueError as e:
-        print(f"⚠️ {e}")
-        return
-
-    # **Retrieve Selected Recipe**
-    selected_idx = top_10_indices[choice]
-    selected_recipe = data.recipe_names[selected_idx]
-    ingredients = data.recipe_ingredients[selected_idx] if hasattr(data, "recipe_ingredients") else []
+        print("Invalid input.")
+        return None, data
+    
+    selected_recipe = data.recipe_names[choice]
+    ingredients = data.recipe_ingredients[choice] if hasattr(data, "recipe_ingredients") else []
     macros = {
-        "calories": data.x[selected_idx, 0].item() * FDA_VALUES["calories"],
-        "protein_g": data.x[selected_idx, 1].item() * FDA_VALUES["protein"],
-        "sugar_g": data.x[selected_idx, 2].item() * FDA_VALUES["sugar"],
-        "carbohydrates_total_g": data.x[selected_idx, 3].item() * FDA_VALUES["carbs"],
-        "sodium_mg": data.x[selected_idx, 4].item() * FDA_VALUES["sodium"]
+        "calories": data.x[choice, 0].item() * FDA_VALUES["calories"],
+        "total_fat": data.x[choice, 1].item() * FDA_VALUES["total_fat"],
+        "saturated_fat": data.x[choice, 2].item() * FDA_VALUES["saturated_fat"],
+        "cholesterol": data.x[choice, 3].item() * FDA_VALUES["cholesterol"],
+        "sodium": data.x[choice, 4].item() * FDA_VALUES["sodium"],
+        "total_carbs": data.x[choice, 5].item() * FDA_VALUES["total_carbs"],
+        "fiber": data.x[choice, 6].item() * FDA_VALUES["fiber"],
+        "sugar": data.x[choice, 7].item() * FDA_VALUES["sugar"],
+        "protein": data.x[choice, 8].item() * FDA_VALUES["protein"]
     }
-
-    # ✅ Call LLM to suggest modifications for the selected recipe
-    modifications = suggest_modifications(selected_recipe, ingredients, macros, user_priority)
-    print(f"\n Suggested Modifications for Selected Recipe:\n{modifications}")
-
-    return None, None
+    
+    try:
+        modifications = suggest_modifications(selected_recipe, ingredients, macros, user_priority)
+        print(f"\nSuggested Modifications for {selected_recipe}:\n{modifications}")
+    except Exception as e:
+        print("Error in LLM modification suggestion:", e)
+    
+    return None, data
 
 if __name__ == '__main__':
     trained_model, graph_data = train()
