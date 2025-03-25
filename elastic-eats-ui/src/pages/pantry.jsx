@@ -11,7 +11,7 @@ const Pantry = () => {
   const { user } = useUser();
   const [loginModalOpen, setLoginModalOpen] = useState(true); // Start with login modal open
   const [pantryItems, setPantryItems] = useState([]);
-  const [newItem, setNewItem] = useState({ name: '', quantity: '', expirationDate: '' });
+  const [newItem, setNewItem] = useState({ name: '', quantity: '', expirationDate: '', unit: '' });
   const toast = useToast();
 
   useEffect(() => {
@@ -20,8 +20,8 @@ const Pantry = () => {
     }
   }, [user]);
 
-  const handleAddItem = () => {
-    if (!newItem.name || !newItem.quantity || !newItem.expirationDate) {
+  const handleAddItem = async () => {
+    if (!newItem.name || !newItem.quantity || !newItem.unit || !newItem.expirationDate) {
       toast({
         title: 'Incomplete information',
         description: 'Please fill out all fields.',
@@ -31,13 +31,66 @@ const Pantry = () => {
       });
       return;
     }
-    setPantryItems([...pantryItems, newItem]);
-    setNewItem({ name: '', quantity: '', expirationDate: '' });
+    try {
+      const response = await fetch('http://localhost:5001/add_item', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: newItem.name,
+          qty: newItem.quantity,
+          unit: newItem.unit,
+          exp_date: newItem.expirationDate,
+          user_id: user.user_id,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to add item');
+      }
+      const data = await response.json();
+      setPantryItems([...pantryItems, data]);
+      setNewItem({ name: '', quantity: '', unit: '', expirationDate: '' });
+    } catch (error) {
+      console.error('Error adding item:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to add item.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
   };
 
-  const handleRemoveItem = (index) => {
-    const updatedItems = pantryItems.filter((_, i) => i !== index);
-    setPantryItems(updatedItems);
+  const handleRemoveItem = async (index) => {
+    const item = pantryItems[index];
+    try {
+      const response = await fetch('http://localhost:5001/remove_item', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: item.name,
+          user_id: user.user_id,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to remove item');
+      }
+      const data = await response.json();
+      setPantryItems(data);
+    } catch (error) {
+      console.error('Error removing item:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to remove item.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
   };
 
   return (
@@ -70,6 +123,11 @@ const Pantry = () => {
                 onChange={(e) => setNewItem({ ...newItem, quantity: e.target.value })}
               />
               <Input
+                placeholder="Unit"
+                value={newItem.unit}
+                onChange={(e) => setNewItem({ ...newItem, unit: e.target.value })}
+              />
+              <Input
                 type="date"
                 value={newItem.expirationDate}
                 onChange={(e) => setNewItem({ ...newItem, expirationDate: e.target.value })}
@@ -88,7 +146,7 @@ const Pantry = () => {
               pantryItems.map((item, index) => (
                 <HStack key={index} w="100%" p={4} borderWidth="1px" borderRadius="md" justifyContent="space-between">
                   <Text flex="1" ml={4} fontWeight="bold">{item.name}</Text>
-                  <Text>{item.quantity}</Text>
+                  <Text>{item.quantity} {item.unit}</Text>
                   <Text>{new Date(item.expirationDate).toLocaleDateString()}</Text>
                   <IconButton
                     icon={<DeleteIcon />}
