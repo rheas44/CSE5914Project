@@ -49,7 +49,8 @@ const Pantry = () => {
         throw new Error('Failed to add item');
       }
       const data = await response.json();
-      setPantryItems([...pantryItems, data]);
+      console.log(data.pantry);
+      setPantryItems(data.pantry);
       setNewItem({ name: '', quantity: '', unit: '', expirationDate: '' });
     } catch (error) {
       console.error('Error adding item:', error);
@@ -80,7 +81,7 @@ const Pantry = () => {
         throw new Error('Failed to remove item');
       }
       const data = await response.json();
-      setPantryItems(data);
+      setPantryItems(data.pantry);
     } catch (error) {
       console.error('Error removing item:', error);
       toast({
@@ -146,8 +147,8 @@ const Pantry = () => {
               pantryItems.map((item, index) => (
                 <HStack key={index} w="100%" p={4} borderWidth="1px" borderRadius="md" justifyContent="space-between">
                   <Text flex="1" ml={4} fontWeight="bold">{item.name}</Text>
-                  <Text>{item.quantity} {item.unit}</Text>
-                  <Text>{new Date(item.expirationDate).toLocaleDateString()}</Text>
+                  <Text>{item.qty} {item.unit}</Text>
+                  <Text>{item.exp_date}</Text>
                   <IconButton
                     icon={<DeleteIcon />}
                     colorScheme="red"

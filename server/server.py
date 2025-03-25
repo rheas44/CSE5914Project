@@ -134,7 +134,7 @@ def add_item():
         pantry_list.append(item)  # Add the new item to the existing list
         es.index(index="pantry", id=results["hits"]['hits'][0]['_id'], document={"user_id": user_id, "items": pantry_list})  # Store updated list
         print(f"Successfully added: {name}")
-        return jsonify({"Success": "Successfully added item"}), 200
+        return jsonify({"Success": "Successfully added item", "pantry": pantry_list}), 200
     except Exception as e:
         print("Error querying Elasticsearch:", e)
         return jsonify({"error": "Elasticsearch Error"}), 400
@@ -171,7 +171,7 @@ def remove_item():
         print("Error querying Elasticsearch:", e)
         return jsonify({"error": "Elasticsearch Error"}), 400
 
-    return jsonify({"message": f"Item '{name}' removed successfully!"}), 200
+    return jsonify({"message": f"Item '{name}' removed successfully!", "pantry": pantry_list}), 200
 
 def hash_email(email):
     return hashpw(email.encode('utf-8'), gensalt()).decode('utf-8')
