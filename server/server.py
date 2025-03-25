@@ -73,9 +73,10 @@ def search_recipes():
 
     return jsonify(recipes)
 
-@app.route('/pantry', methods=['GET'])
+@app.route('/pantry', methods=['POST'])
 def get_pantry():
-    user_id = request.args.get("user_id")
+    user_id = request.get_json().get("user_id")
+    print(user_id)
 
     if not user_id:
         return jsonify({"error": "No search user_id provided"}), 400
@@ -83,7 +84,7 @@ def get_pantry():
     # Search in Elasticsearch
     es_query = {
         "query": {
-            "match": {
+            "term": {
                 "user_id": user_id  
             }
         }

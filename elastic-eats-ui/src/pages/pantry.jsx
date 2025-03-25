@@ -20,6 +20,33 @@ const Pantry = () => {
     }
   }, [user]);
 
+  useEffect(() => {
+    const fetchPantryItems = async () => {
+      if (user.user_id) {
+        try {
+          const response = await fetch('http://localhost:5001/pantry', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              user_id: user.user_id,
+            }),
+          });
+          if (!response.ok) {
+            throw new Error('Failed to fetch pantry items');
+          }
+          const data = await response.json();
+          setPantryItems(data.pantry); // Set pantry items from server response
+        } catch (error) {
+          console.error('Error fetching pantry items:', error);
+        }
+      }
+    };
+
+    fetchPantryItems(); // Call the function to fetch pantry items
+  }, [user]); // Dependency array to run when user changes
+
   const handleAddItem = async () => {
     if (!newItem.name || !newItem.quantity || !newItem.unit || !newItem.expirationDate) {
       toast({
