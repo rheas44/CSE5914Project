@@ -7,7 +7,6 @@ import React, { useState } from 'react';
 const Signup = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [successSignup, setSuccessSignup] = useState(false); // Added state variable for successSignup
-
   // State variables for input fields
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');

@@ -5,10 +5,10 @@ from dotenv import load_dotenv
 import requests
 from flask_cors import CORS 
 from bcrypt import hashpw, gensalt
-import signal
+import time
 import subprocess
 import sys
-import time
+import signal
 
 # Load environment variables
 load_dotenv()
@@ -19,7 +19,7 @@ ES_USER = "elastic"
 
 # Initialize Flask app
 app = Flask(__name__)
-CORS(app)  # Enable CORS for frontend communication
+CORS(app, origins = "http://localhost:5173")
 
 def fetch_recipes(query, filters=None):  # Add filters parameter
     """Fetch recipes from API-Ninjas with optional filtering."""
@@ -126,9 +126,78 @@ def search_recipes():
         print("Error processing request:", e)
         return jsonify({"error": "An error occurred"}), 500
 
-@app.route('/pantry', methods=['GET'])
+@app.route('/pantry', methods=['POST'])
 def get_pantry():
-    user_id = request.args.get("user_id")
+    user_id = request.get_json().get("user_id")
+    print(user_id)
+
+    if not user_id:
+        return jsonify({"error": "No search user_id provided"}), 400
+
+    # Search in Elasticsearch
+    es_query = {
+        "query": {
+            "term": {
+                "user_id": user_id  
+            }
+        }
+    }
+
+    try:
+        results = es.search(index="pantry", body=es_query)
+        pantry_list = results["hits"]['hits'][0]['_source']['items']
+        print(pantry_list)
+    except Exception as e:
+        print("Error querying Elasticsearch:", e)
+        return jsonify({"error": "Elasticsearch Error"}), 400
+
+    return jsonify({ "pantry": pantry_list }), 200
+
+@app.route('/add_item', methods=['POST'])
+def add_item():
+
+    data = request.get_json()
+    name = data.get("name")
+    qty = data.get("qty")
+    unit = data.get("unit")
+    exp_date = data.get("exp_date")
+    user_id = data.get("user_id")
+
+    if not user_id:
+        return jsonify({"error": "No search user_id provided"}), 400
+
+    # Search in Elasticsearch
+    es_query = {
+        "query": {
+            "term": {
+                "user_id": user_id  
+            }
+        }
+    }
+
+    item = {
+        "name": name,
+        "qty": qty,
+        "unit": unit,
+        "exp_date": exp_date
+    }
+
+    try:
+        results = es.search(index="pantry", body=es_query)
+        pantry_list = results["hits"]['hits'][0]['_source']['items']
+        pantry_list.append(item)  # Add the new item to the existing list
+        es.index(index="pantry", id=results["hits"]['hits'][0]['_id'], document={"user_id": user_id, "items": pantry_list})  # Store updated list
+        print(f"Successfully added: {name}")
+        return jsonify({"Success": "Successfully added item", "pantry": pantry_list}), 200
+    except Exception as e:
+        print("Error querying Elasticsearch:", e)
+        return jsonify({"error": "Elasticsearch Error"}), 400
+
+@app.route('/remove_item', methods=['POST'])
+def remove_item():
+    data = request.get_json()
+    name = data.get("name")
+    user_id = data.get("user_id")
 
     if not user_id:
         return jsonify({"error": "No search user_id provided"}), 400
@@ -145,12 +214,18 @@ def get_pantry():
     try:
         results = es.search(index="pantry", body=es_query)
         pantry_list = results["hits"]['hits'][0]['_source']['items']
-        print(pantry_list)
+        
+        # Remove item with the specified name
+        pantry_list = [item for item in pantry_list if item['name'] != name]  # Filter out the item to be removed
+        
+        # Update the pantry list in Elasticsearch
+        es.index(index="pantry", id=results["hits"]['hits'][0]['_id'], document={"user_id": user_id, "items": pantry_list})
+        
     except Exception as e:
         print("Error querying Elasticsearch:", e)
         return jsonify({"error": "Elasticsearch Error"}), 400
 
-    return jsonify({ "pantry": pantry_list }), 200
+    return jsonify({"message": f"Item '{name}' removed successfully!", "pantry": pantry_list}), 200
 
 def hash_email(email):
     return hashpw(email.encode('utf-8'), gensalt()).decode('utf-8')
@@ -166,25 +241,25 @@ def login():
     if not username or not password:
         return jsonify({"error": "Username and password are required"}), 400
 
-    # Search for the user in Elasticsearch
     es_query = {
         "query": {
             "bool": {
                 "must": [
-                    {"term": {"username": username}},  # Assuming username is indexed
-                    {"term": {"password": password}}  # Using term query for exact match
+                    {"match": {"username": username}},
+                    {"match": {"password": password}}
                 ]
             }
         }
     }
 
     try:
-        results = es.search(index="users", body=es_query)  # Assuming users are stored in 'users' index
-        if results["hits"]["total"]["value"] > 0:
-            user_email = results["hits"]['hits'][0]['_source']['email']
-            # Assuming there's a function to hash the email
-            hashed_email = hash_email(user_email)
-            return jsonify({"message": "Login successful!", "user_id": hashed_email}), 200
+        results = es.search(index="users", body=es_query)
+        print(results["hits"]['hits'])
+        if results["hits"]["total"].get("value", 0) > 0:
+            user_id = results["hits"]["hits"][0]["_source"].get("user_id", None)
+            response = jsonify({"message": "Login successful!", "user_id": user_id})
+            response.headers.add("Access-Control-Allow-Origin", "http://localhost:5173")
+            return response, 200
         else:
             return jsonify({"error": "Invalid username or password"}), 401
     except Exception as e:
@@ -227,6 +302,7 @@ def signup():
     user_data = {
         "username": username,
         "email": email,
+        "user_id": hash_email(email),
         "first_name": firstName,
         "last_name": lastName,
         "password": password  # Store password securely
@@ -236,7 +312,7 @@ def signup():
         es.index(index='users', id=user_data['email'], document=user_data, routing=user_data['email'])  # Adding the user to the 'users' index
 
         new_pantry = {
-            "user_id": hash_email(email),
+            "user_id": user_data["user_id"],
             "items": []
         }
 
