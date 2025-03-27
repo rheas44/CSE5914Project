@@ -6,17 +6,19 @@ import {
 import { DeleteIcon } from '@chakra-ui/icons';
 import { useUser } from "../components/UserContext";
 import LoginCard from "../components/login-card";
+import PantryItemCard from "../components/pantry-item";
+
 
 const Pantry = () => {
   const { user } = useUser();
-  const [loginModalOpen, setLoginModalOpen] = useState(true); // Start with login modal open
+  const [loginModalOpen, setLoginModalOpen] = useState(true);
   const [pantryItems, setPantryItems] = useState([]);
   const [newItem, setNewItem] = useState({ name: '', quantity: '', expirationDate: '', unit: '' });
   const toast = useToast();
 
   useEffect(() => {
     if (user.username) {
-      setLoginModalOpen(false); // Close modal when user logs in
+      setLoginModalOpen(false);
     }
   }, [user]);
 
@@ -24,28 +26,22 @@ const Pantry = () => {
     const fetchPantryItems = async () => {
       if (user.user_id) {
         try {
-          const response = await fetch('http://localhost:5001/pantry', {
-            method: 'POST',
+          const response = await fetch(`http://localhost:5001/pantry?user_id=${user.user_id}`, {
+            method: 'GET',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-              user_id: user.user_id,
-            }),
           });
-          if (!response.ok) {
-            throw new Error('Failed to fetch pantry items');
-          }
           const data = await response.json();
-          setPantryItems(data.pantry); // Set pantry items from server response
+          setPantryItems(data.pantry);
         } catch (error) {
           console.error('Error fetching pantry items:', error);
         }
       }
     };
 
-    fetchPantryItems(); // Call the function to fetch pantry items
-  }, [user]); // Dependency array to run when user changes
+    fetchPantryItems();
+  }, [user]);
 
   const handleAddItem = async () => {
     if (!newItem.name || !newItem.quantity || !newItem.unit || !newItem.expirationDate) {
@@ -58,6 +54,7 @@ const Pantry = () => {
       });
       return;
     }
+
     try {
       const response = await fetch('http://localhost:5001/add_item', {
         method: 'POST',
@@ -72,11 +69,8 @@ const Pantry = () => {
           user_id: user.user_id,
         }),
       });
-      if (!response.ok) {
-        throw new Error('Failed to add item');
-      }
+
       const data = await response.json();
-      console.log(data.pantry);
       setPantryItems(data.pantry);
       setNewItem({ name: '', quantity: '', unit: '', expirationDate: '' });
     } catch (error) {
@@ -104,9 +98,7 @@ const Pantry = () => {
           user_id: user.user_id,
         }),
       });
-      if (!response.ok) {
-        throw new Error('Failed to remove item');
-      }
+
       const data = await response.json();
       setPantryItems(data.pantry);
     } catch (error) {
@@ -122,8 +114,7 @@ const Pantry = () => {
   };
 
   return (
-    <Box maxW="800px" mx="auto" mt={8} p={4}>
-      {/* Show login modal if the user is not signed in and hasn't closed it */}
+    <Box maxW="900px" mx="auto" mt={8} p={4}>
       <LoginCard isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} />
 
       {!user.username && !loginModalOpen ? (
@@ -134,57 +125,61 @@ const Pantry = () => {
         </VStack>
       ) : (
         <>
-          {/* Pantry UI */}
           <Text fontSize="2xl" mb={4} textAlign="center" fontWeight="bold">Your Pantry</Text>
 
-          {/* Input for adding new items */}
-          <VStack spacing={4} mb={8} align="stretch">
-            <Flex gap={2}>
-              <Input
-                placeholder="Item Name"
-                value={newItem.name}
-                onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
-              />
-              <Input
-                placeholder="Quantity"
-                value={newItem.quantity}
-                onChange={(e) => setNewItem({ ...newItem, quantity: e.target.value })}
-              />
-              <Input
-                placeholder="Unit"
-                value={newItem.unit}
-                onChange={(e) => setNewItem({ ...newItem, unit: e.target.value })}
-              />
-              <Input
-                type="date"
-                value={newItem.expirationDate}
-                onChange={(e) => setNewItem({ ...newItem, expirationDate: e.target.value })}
-              />
-              <Button colorScheme="green" onClick={handleAddItem}>Add</Button>
-            </Flex>
-          </VStack>
+          {/* Compact, horizontal form for adding items */}
+          <Flex gap={2} mb={8} direction="row" align="center" flexWrap="nowrap">
+            <Input
+              placeholder="Item Name"
+              value={newItem.name}
+              width="160px"
+              onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+            />
+            <Input
+              placeholder="Quantity"
+              value={newItem.quantity}
+              width="100px"
+              onChange={(e) => setNewItem({ ...newItem, quantity: e.target.value })}
+            />
+            <Input
+              placeholder="Unit"
+              value={newItem.unit}
+              width="100px"
+              onChange={(e) => setNewItem({ ...newItem, unit: e.target.value })}
+            />
+            <Input
+              type="date"
+              value={newItem.expirationDate}
+              width="170px"
+              onChange={(e) => setNewItem({ ...newItem, expirationDate: e.target.value })}
+            />
+            <Button colorScheme="green" onClick={handleAddItem}>Add</Button>
+          </Flex>
 
-          {/* Pantry Items Display */}
-          <VStack spacing={4} align="stretch">
+          {/* Pantry items displayed in a card grid */}
+          <Flex wrap="wrap" gap={4} justifyContent="center">
             {pantryItems.length === 0 ? (
               <Text textAlign="center" fontSize="lg" color="gray.500">
                 Your pantry is empty. Start adding items!
               </Text>
             ) : (
               pantryItems.map((item, index) => (
-                <HStack key={index} w="100%" p={4} borderWidth="1px" borderRadius="md" justifyContent="space-between">
-                  <Text flex="1" ml={4} fontWeight="bold">{item.name}</Text>
-                  <Text>{item.qty} {item.unit}</Text>
-                  <Text>{item.exp_date}</Text>
+                <Box key={index} position="relative">
+                  <PantryItemCard item={item} />
                   <IconButton
                     icon={<DeleteIcon />}
                     colorScheme="red"
+                    size="sm"
+                    position="absolute"
+                    top="8px"
+                    right="8px"
                     onClick={() => handleRemoveItem(index)}
+                    aria-label={`Remove ${item.name}`}
                   />
-                </HStack>
+                </Box>
               ))
             )}
-          </VStack>
+          </Flex>
         </>
       )}
     </Box>
