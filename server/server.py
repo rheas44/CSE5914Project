@@ -79,7 +79,7 @@ def apply_filter(recipe, filter_item):
     return True
 
 
-@app.route('/recipes/search', methods=['POST'])
+@app.route('/recipe_box_v2/search', methods=['POST'])
 def search_recipes():
     try:
         data = request.get_json()
@@ -114,18 +114,18 @@ def search_recipes():
 
                 es_query["query"]["bool"]["filter"].append(range_query)
 
-        results = es.search(index="recipe_box", body=es_query)
+        results = es.search(index="recipe_box_v2", body=es_query)
         recipes = [hit["_source"] for hit in results["hits"]["hits"]]
 
-        if not recipes:  # If no results in ES, fetch from API-Ninjas
-            recipes = fetch_recipes(query, filters)  # Pass filters to fetch_recipes
+        # if not recipes:  # If no results in ES, fetch from API-Ninjas
+        #     recipes = fetch_recipes(query, filters)  # Pass filters to fetch_recipes
 
-            if recipes:
-                for i, recipe in enumerate(recipes):
-                    try:
-                        es.index(index="recipe_box", id=i + 1, document=recipe)
-                    except Exception as e:
-                        print(f"Error indexing recipe {i+1}: {e}")
+        #     if recipes:
+        #         for i, recipe in enumerate(recipes):
+        #             try:
+        #                 es.index(index="recipe_box", id=i + 1, document=recipe)
+        #             except Exception as e:
+        #                 print(f"Error indexing recipe {i+1}: {e}")
 
         return jsonify(recipes)
 
@@ -171,6 +171,26 @@ def login():
     except Exception as e:
         print("Error querying Elasticsearch:", e)
         return jsonify({"error": "Internal server error"}), 500
+    
+@app.route('/recipe_box_v2/random', methods=['GET'])
+def get_random_recipes():
+    try:
+        es_query = {
+            "query": {
+                "function_score": {
+                    "query": {"match_all": {}},
+                    "random_score": {}  # Uses a random seed automatically
+                }
+            },
+            "size": 3
+        }
+        results = es.search(index="recipe_box_v2", body=es_query)
+        recipes = [hit["_source"] for hit in results["hits"]["hits"]]
+        return jsonify(recipes)
+    except Exception as e:
+        print("Error fetching random recipes:", e)
+        return jsonify({"error": "An error occurred"}), 500
+
     
 @app.route('/signup', methods=['POST'])
 def signup():
