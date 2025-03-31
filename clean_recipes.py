@@ -9,6 +9,22 @@ def extract_serving_count(servings_str):
     match = re.search(r'(\d+)', servings_str)
     return int(match.group(1)) if match else None
 
+def compute_nutrition_per_serving(nutrition, serving_count):
+    """
+    Given a nutrition dictionary and a serving count, computes per serving nutrition.
+    Divides each numeric value by the serving count.
+    Returns a new dictionary with per serving values.
+    """
+    if serving_count and serving_count > 0:
+        nutrition_per_serving = {}
+        for key, value in nutrition.items():
+            if isinstance(value, (int, float)):
+                nutrition_per_serving[key] = value / serving_count
+            else:
+                nutrition_per_serving[key] = value
+        return nutrition_per_serving
+    return {}
+
 def clean_recipes(input_file, output_file):
     # Load recipes from the input file
     with open(input_file, "r", encoding="utf-8") as f:
@@ -18,20 +34,27 @@ def clean_recipes(input_file, output_file):
     seen_titles = set()  # To track duplicate titles (normalized)
 
     for recipe in recipes:
-        # Get nutrition data and calories
+        # Get nutrition data and total calories
         nutrition = recipe.get("nutrition", {})
         calories = nutrition.get("Calories", 0)
         
-        # Skip if calories are 0
+        # Skip recipes with zero calories
         if calories == 0:
             continue
 
-        # Extract serving count from the 'servings' string
+        # Extract serving count from the 'servings' string and save as numeric field
         servings_str = recipe.get("servings", "")
         serving_count = extract_serving_count(servings_str)
-        # If it's a 1-serving recipe and calories exceed 2000, skip it
+        recipe["servings_num"] = serving_count  # add new numeric field
+
+        # If it's a 1-serving recipe and total calories exceed 2000, skip it
         if serving_count == 1 and calories > 2000:
             continue
+
+        # Compute per serving nutrition values
+        nutrition_per_serving = compute_nutrition_per_serving(nutrition, serving_count)
+        # Add the computed per serving nutrition to the recipe
+        recipe["nutrition_per_serving"] = nutrition_per_serving
 
         # Normalize the title for duplicate checking
         title = recipe.get("title", "").strip().lower()
@@ -39,10 +62,10 @@ def clean_recipes(input_file, output_file):
             continue  # Duplicate found; skip it.
         seen_titles.add(title)
 
-        # If recipe passes all filters, include it in the cleaned list
+        # If the recipe passes all filters, add it to the cleaned list
         cleaned_recipes.append(recipe)
     
-    # Write the cleaned recipes to the new JSON file without overwriting the old file.
+    # Write the cleaned recipes to the new JSON file.
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(cleaned_recipes, f, indent=2)
     
