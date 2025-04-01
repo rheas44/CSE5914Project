@@ -19,29 +19,29 @@ const Pantry = () => {
   useEffect(() => {
     if (user.username) {
       setLoginModalOpen(false);
+      fetchPantryItems();
     }
   }, [user]);
 
-  useEffect(() => {
-    const fetchPantryItems = async () => {
-      if (user.user_id) {
-        try {
-          const response = await fetch(`http://localhost:5001/pantry?user_id=${user.user_id}`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          });
-          const data = await response.json();
-          setPantryItems(data.pantry);
-        } catch (error) {
-          console.error('Error fetching pantry items:', error);
-        }
+  const fetchPantryItems = async () => {
+    if (user.user_id) {
+      try {
+        const response = await fetch('http://localhost:5001/pantry', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            user_id: user.user_id,
+          }),
+        });
+        const data = await response.json();
+        setPantryItems(data.pantry);
+      } catch (error) {
+        console.error('Error fetching pantry items:', error);
       }
-    };
-
-    fetchPantryItems();
-  }, [user]);
+    }
+  };
 
   const handleAddItem = async () => {
     if (!newItem.name || !newItem.quantity || !newItem.unit || !newItem.expirationDate) {
