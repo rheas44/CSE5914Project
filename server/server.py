@@ -21,6 +21,14 @@ ES_USER = "elastic"
 app = Flask(__name__)
 CORS(app, origins = "http://localhost:5173")
 
+# Map the filter values from the UI to the document field names
+field_mapping = {
+    "Calories": "Calories",
+    "Protein (g)": "Protein",
+    "Carbs (g)": "Total carbs",
+    "Fat (g)": "Total fat"
+}
+
 def fetch_recipes(query, filters=None):  # Add filters parameter
     """Fetch recipes from API-Ninjas with optional filtering."""
 
@@ -51,28 +59,27 @@ def fetch_recipes(query, filters=None):  # Add filters parameter
         return []
 
 def apply_filter(recipe, filter_item):
-    """Apply a single filter to a recipe."""
+    """Apply a single filter to a recipe using per-serving nutrition values."""
     filter_type = filter_item.get("type")
     min_val = filter_item.get("min")
     max_val = filter_item.get("max")
 
-    if not recipe.get("macros"): # Handle cases where macros are missing
+    # Use the per-serving nutrition for filtering
+    if not recipe.get("nutrition_per_serving"):
         return False
 
-    macro_value = recipe["macros"].get(filter_type)
-
-    if macro_value is None: # Handle cases where specific macro is missing
+    value = recipe["nutrition_per_serving"].get(filter_type)
+    if value is None:
         return False
 
-    if min_val != "" and float(macro_value) < float(min_val):
+    if min_val != "" and float(value) < float(min_val):
         return False
-    if max_val != "" and float(macro_value) > float(max_val):
+    if max_val != "" and float(value) > float(max_val):
         return False
 
     return True
 
-
-@app.route('/recipes/search', methods=['POST'])
+@app.route('/recipe_box_v2/search', methods=['POST'])
 def search_recipes():
     try:
         data = request.get_json()
@@ -98,33 +105,32 @@ def search_recipes():
                 filter_type = filter_item.get("type")
                 min_val = filter_item.get("min")
                 max_val = filter_item.get("max")
+                
+                    # Convert display filter type to the actual document field name
+                field_name = field_mapping.get(filter_type, filter_type)
 
-                range_query = {"range": {f"macros.{filter_type}": {}}}
+                # Build a range query on per-serving nutrition values
+                range_query = {"range": {f"nutrition_per_serving.{field_name}": {}}}
                 if min_val != "":
-                    range_query["range"][f"macros.{filter_type}"]["gte"] = min_val
+                    range_query["range"][f"nutrition_per_serving.{field_name}"]["gte"] = float(min_val)
                 if max_val != "":
-                    range_query["range"][f"macros.{filter_type}"]["lte"] = max_val
+                    range_query["range"][f"nutrition_per_serving.{field_name}"]["lte"] = float(max_val)
+
 
                 es_query["query"]["bool"]["filter"].append(range_query)
 
-        results = es.search(index="recipe_box", body=es_query)
+        results = es.search(index="recipe_box_v2", body=es_query)
         recipes = [hit["_source"] for hit in results["hits"]["hits"]]
 
-        if not recipes:  # If no results in ES, fetch from API-Ninjas
-            recipes = fetch_recipes(query, filters)  # Pass filters to fetch_recipes
-
-            if recipes:
-                for i, recipe in enumerate(recipes):
-                    try:
-                        es.index(index="recipe_box", id=i + 1, document=recipe)
-                    except Exception as e:
-                        print(f"Error indexing recipe {i+1}: {e}")
+        # Optionally, if no recipes are found in ES, you could fall back to fetching from API-Ninjas:
+        # recipes = fetch_recipes(query, filters)
 
         return jsonify(recipes)
 
     except Exception as e:
         print("Error processing request:", e)
         return jsonify({"error": "An error occurred"}), 500
+
 
 @app.route('/pantry', methods=['POST'])
 def get_pantry():
@@ -241,8 +247,8 @@ def login():
         "query": {
             "bool": {
                 "must": [
-                    {"match": {"username": username}},
-                    {"match": {"password": password}}
+                    {"term": {"username": username}},  # Assuming username is indexed
+                    {"term": {"password": password}}  # Using term query for exact match
                 ]
             }
         }
@@ -260,6 +266,26 @@ def login():
     except Exception as e:
         print("Error querying Elasticsearch:", e)
         return jsonify({"error": "Internal server error"}), 500
+    
+@app.route('/recipe_box_v2/random', methods=['GET'])
+def get_random_recipes():
+    try:
+        es_query = {
+            "query": {
+                "function_score": {
+                    "query": {"match_all": {}},
+                    "random_score": {}  # Uses a random seed automatically
+                }
+            },
+            "size": 3
+        }
+        results = es.search(index="recipe_box_v2", body=es_query)
+        recipes = [hit["_source"] for hit in results["hits"]["hits"]]
+        return jsonify(recipes)
+    except Exception as e:
+        print("Error fetching random recipes:", e)
+        return jsonify({"error": "An error occurred"}), 500
+
     
 @app.route('/signup', methods=['POST'])
 def signup():
