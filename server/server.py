@@ -129,7 +129,6 @@ def search_recipes():
 @app.route('/pantry', methods=['POST'])
 def get_pantry():
     user_id = request.get_json().get("user_id")
-    print(user_id)
 
     if not user_id:
         return jsonify({"error": "No search user_id provided"}), 400
@@ -146,7 +145,6 @@ def get_pantry():
     try:
         results = es.search(index="pantry", body=es_query)
         pantry_list = results["hits"]['hits'][0]['_source']['items']
-        print(pantry_list)
     except Exception as e:
         print("Error querying Elasticsearch:", e)
         return jsonify({"error": "Elasticsearch Error"}), 400
@@ -220,7 +218,7 @@ def remove_item():
         
         # Update the pantry list in Elasticsearch
         es.index(index="pantry", id=results["hits"]['hits'][0]['_id'], document={"user_id": user_id, "items": pantry_list})
-        
+        print(f"Successfully removed: {name}")
     except Exception as e:
         print("Error querying Elasticsearch:", e)
         return jsonify({"error": "Elasticsearch Error"}), 400
@@ -235,8 +233,6 @@ def login():
     data = request.get_json()
     username = data.get("username")
     password = data.get("password")
-
-    print(username, password)
 
     if not username or not password:
         return jsonify({"error": "Username and password are required"}), 400
@@ -254,7 +250,6 @@ def login():
 
     try:
         results = es.search(index="users", body=es_query)
-        print(results["hits"]['hits'])
         if results["hits"]["total"].get("value", 0) > 0:
             user_id = results["hits"]["hits"][0]["_source"].get("user_id", None)
             response = jsonify({"message": "Login successful!", "user_id": user_id})
