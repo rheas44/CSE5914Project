@@ -6,6 +6,7 @@ import requests
 from flask_cors import CORS 
 from bcrypt import hashpw, gensalt
 import time
+from ml.recipe_modifier import suggest_modifications
 
 # Load environment variables
 load_dotenv()
@@ -369,6 +370,49 @@ def create_es_client():
             time.sleep(1)  # Wait a bit before trying again
     print("Failed to connect to Elasticsearch within 10 seconds.")
     return None  # Return None if connection fails
+
+@app.route('/enhance_recipe', methods=['POST'])
+def enhance_recipe():
+    try:
+        data = request.get_json()
+        print("📥 Incoming Data:", data)
+
+        recipe = data.get("recipe", {})
+        user_priority = data.get("userGoals", "")
+
+        if not recipe or not user_priority:
+            print("❌ Missing data")
+            return jsonify({"error": "Missing recipe or user goals"}), 400
+
+        title = recipe.get("title", "Untitled Recipe")
+        ingredients = recipe.get("ingredients", [])
+        nutrition = recipe.get("nutrition", {})
+
+        macros = {
+            "calories": nutrition.get("Calories", 0),
+            "protein_g": nutrition.get("Protein", 0),
+            "sugar_g": nutrition.get("Sugar", 0),
+            "carbohydrates_total_g": nutrition.get("Total carbs", 0),
+            "sodium_mg": nutrition.get("Sodium", 0)
+        }
+
+        print("🧪 Recipe title:", title)
+        print("🧪 Macros:", macros)
+        print("🧪 Ingredients:", ingredients)
+        print("🧪 User Goals:", user_priority)
+
+        suggestion_text = suggest_modifications(
+            recipe_name=title,
+            ingredients=ingredients,
+            macros=macros,
+            user_priority=user_priority
+        )
+
+        return jsonify({"suggestions": suggestion_text}), 200
+
+    except Exception as e:
+        print("🔥 Error in enhance_recipe route:", e)
+        return jsonify({"error": "Failed to enhance recipe"}), 500
 
 es = create_es_client()
 
