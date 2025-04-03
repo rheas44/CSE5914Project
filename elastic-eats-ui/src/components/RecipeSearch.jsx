@@ -100,7 +100,7 @@ const RecipeSearch = ({ onSearch }) => {
             placeholder="Search for recipes..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            bg="white"
+            bg="background.primary"
           />
           <IconButton
             aria-label="Search"

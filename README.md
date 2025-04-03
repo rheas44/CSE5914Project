@@ -71,4 +71,4 @@ Important: The frontend (React) and backend (Flask) must be run in separate term
 1. Install elasticdump:
    ```npm install -g elasticdump```
 2. Dump recipes:
-   ```elasticdump --input=recipes_index.json --output=http://elastic:p5FE3c=alPhGd20o14bx@localhost:9200/recipe_box --type=data --debug```
+   ```elasticdump --input=final_recipes_v2_elastic_clean.ndjson --output=http://elastic:p5FE3c=alPhGd20o14bx@localhost:9200/recipe_box_v2 --type=data --inputFormat=ndjson```
