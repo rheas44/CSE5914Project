@@ -16,27 +16,14 @@ Elastic Eats is a recipe generator that leverages Elasticsearch to search and ge
 
 ## Installation & Running the Project
 
-Important: The frontend (React) and backend (Flask) must be run in separate terminal windows.
+The front and backend are run through Docker.
 
-### Frontend (React)
+### Running the Program
 
-1. Navigate to the `elastic-eats-ui` directory:
-   ```cd elastic-eats-ui```
-2. Install dependencies:
-   ```npm install```
-3. Start the development server:
-   ```npm run dev```
-4. Open [http://localhost:5173](http://localhost:5173) in your browser.
-
-### Backend (Flask)
-
-1. Navigate to the `server` directory:
-   ```cd server```
-2. Install packages:
-   ```pip install -r requirements.txt```
-3. Start the Flask server:
-   ```python server.py```
-4. The backend runs on [http://localhost:5001](http://localhost:5001) (or the specified port).
+1. Inital Run:
+   ```docker-compose up --build -d```
+2. Subsequent Run:
+   ```docker-compose up -d```
 
 ### Create .env file
 
@@ -55,15 +42,17 @@ Important: The frontend (React) and backend (Flask) must be run in separate term
    ```docker-compose down -v```
 3. Build the containers:
    ```docker-compose build```
-4. Start the services:
+4. Build the containers:
+   ```docker logs [container_id]```
+5. Start the services:
    ```docker-compose up -d```
-5. Finish setting up Docker:
+6. Finish setting up Docker:
    ```docker exec -it elasticsearch bash```
-6. Change elasticsearch password:
+7. Change elasticsearch password:
    ```bin/elasticsearch-reset-password -u elastic -i```
-7. Set new password:
+8. Set new password:
    ```p5FE3c=alPhGd20o14bx```
-8. Exit:
+9. Exit:
    ```exit```
 
 ### Dump data into Elasticsearch
