@@ -8,6 +8,7 @@ import Home from "./pages/home";
 import { useEffect } from "react";
 import Signup from './pages/signup';
 import Pantry from './pages/pantry';
+import RecipeCreate from './pages/recipecreate';
 import { UserProvider } from "./components/UserContext";
 
 function App() {
@@ -32,6 +33,7 @@ function App() {
               <Route path="/contact" element={<Contact />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/pantry" element={<Pantry/>} />
+              <Route path="/recipecreate" element={<RecipeCreate/>} />
             </Routes>
           </Flex>
 

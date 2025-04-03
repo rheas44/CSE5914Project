@@ -41,6 +41,9 @@ const LandingHeader = () => {
           <Link as={RouterLink} to="/pantry" color="text.basic">
           Pantry
           </Link>
+          <Link as={RouterLink} to="/recipecreate" color="text.basic">
+          Add Recipes
+          </Link>
           <Link to="/" onClick={handleLogout}>Logout</Link>
         </Flex>
         </Flex>
@@ -72,6 +75,9 @@ const LandingHeader = () => {
           </Link>
           <Link as={RouterLink} to="/pantry" color="text.basic">
           Pantry
+          </Link>
+          <Link as={RouterLink} to="/recipecreate" color="text.basic">
+          Add Recipes
           </Link>
           <Link 
             as={RouterLink} 
