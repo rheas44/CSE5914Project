@@ -33,17 +33,27 @@ const RecipeCreate = () => {
   const handleAddNewRecipe = async () => {
     if (user.user_id) {
       try {
-        const response = await fetch('http://localhost:5001/pantry', {
+        const response = await fetch('http://localhost:5001/add_recipe', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            user_id: user.user_id,
+            recipe: newRecipe,
+            user_id: user.user_id
           }),
         });
         const data = await response.json();
-        setPantryItems(data.pantry);
+        console.log(data.Success)
+        if (data.Success) {
+          setNewRecipe({
+            title: '',
+            labels: [],
+            ingredients: [],
+            instructions: '',
+            servings: 1
+          });
+        }
       } catch (error) {
         console.error('Error fetching pantry items:', error);
       }
