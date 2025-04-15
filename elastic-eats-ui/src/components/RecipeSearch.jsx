@@ -1,22 +1,23 @@
-import { useState } from 'react';
+import { AddIcon, CheckIcon, DeleteIcon, EditIcon, HamburgerIcon, SearchIcon } from '@chakra-ui/icons';
 import {
-  Flex,
-  Input,
-  IconButton,
-  VStack,
-  Select,
   Button,
-  Text,
+  Flex,
+  IconButton,
+  Input,
   Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
   ModalBody,
-  ModalFooter,
   ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
+  Select,
+  Text,
+  VStack,
 } from '@chakra-ui/react';
 import { SearchIcon, HamburgerIcon, AddIcon, EditIcon, CheckIcon, DeleteIcon } from '@chakra-ui/icons';
 import { useUser } from "./UserContext";
+import { useState } from 'react';
 
 const RecipeSearch = ({ onSearch }) => {
   const { user } = useUser();
@@ -103,7 +104,7 @@ const RecipeSearch = ({ onSearch }) => {
             placeholder="Search for recipes..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            bg="white"
+            bg="background.primary"
           />
           <IconButton
             aria-label="Search"
@@ -124,7 +125,7 @@ const RecipeSearch = ({ onSearch }) => {
 
       <Modal isOpen={isFilterOpen} onClose={() => setIsFilterOpen(false)} isCentered>
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent bg='background.primary'>
           <ModalHeader>Filter Nutrition Facts (Per Serving)</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
@@ -168,7 +169,7 @@ const RecipeSearch = ({ onSearch }) => {
               </Flex>
 
               {filters.map((filter, index) => (
-                <Flex key={index} p={2} align="center" justify="space-between" bg="gray.100" borderRadius="md">
+                <Flex key={index} p={2} align="center" justify="space-between" bg="background.primary" borderRadius="md">
                   <Text flex="1">{filter.type}: {filter.min} - {filter.max}</Text>
                   <IconButton
                     aria-label="Edit filter"

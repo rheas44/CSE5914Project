@@ -47,14 +47,13 @@ def clean_recipes(input_file, output_file):
         serving_count = extract_serving_count(servings_str)
         recipe["servings_num"] = serving_count  # add new numeric field
 
-        # If it's a 1-serving recipe and total calories exceed 2000, skip it
-        if serving_count == 1 and calories > 2000:
-            continue
-
         # Compute per serving nutrition values
         nutrition_per_serving = compute_nutrition_per_serving(nutrition, serving_count)
-        # Add the computed per serving nutrition to the recipe
         recipe["nutrition_per_serving"] = nutrition_per_serving
+
+        # Skip recipes with > 2000 calories per serving
+        if nutrition_per_serving.get("Calories", 0) > 2000:
+            continue
 
         # Normalize the title for duplicate checking
         title = recipe.get("title", "").strip().lower()
