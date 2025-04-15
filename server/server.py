@@ -6,6 +6,14 @@ import requests
 from flask_cors import CORS 
 from bcrypt import hashpw, gensalt
 import time
+import subprocess
+import sys
+import signal
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))  # Add parent directory to path
+from fetch_recipes_and_nutrition import get_nutrition
+from clean_recipes import compute_nutrition_per_serving
+import json
+import uuid
 from ml.recipe_modifier import suggest_modifications
 
 # Load environment variables
@@ -77,12 +85,88 @@ def apply_filter(recipe, filter_item):
 
     return True
 
+def add_nutri_per_serv(recipe):
+    # Get nutrition data and total calories
+    nutrition = recipe.get("nutrition", {})
+    calories = float(nutrition.get("Calories", 0))
+    
+    # Skip recipes with zero calories
+    if calories != 0:
+        serving_count = int(recipe["servings"])
+
+        # If it's a 1-serving recipe and total calories exceed 2000, skip it
+        if not (serving_count == 1 and calories > 2000):
+            # Compute per serving nutrition values
+            nutrition_per_serving = compute_nutrition_per_serving(nutrition, serving_count)
+            # Add the computed per serving nutrition to the recipe
+            recipe["nutrition_per_serving"] = nutrition_per_serving
+
+    # Normalize the title for duplicate checking
+    title = recipe.get("title", "").strip().lower()
+
+def process_new_recipe(recipe):
+    output_file = "final_recipes_v2_clean.json"
+    if os.path.exists(output_file):
+        try:
+            with open(output_file, "r") as infile:
+                existing_recipes = json.load(infile)
+            existing_titles = {recipe.get("title", "") for recipe in existing_recipes}
+        except Exception as e:
+            print("Error reading existing JSON file:", e)
+            existing_recipes = []
+            existing_titles = set()
+    else:
+        existing_recipes = []
+        existing_titles = set()
+
+    title = recipe['title'].strip().lower()
+    if title not in existing_titles:
+        ingredient_string = ""
+        for ingredient in recipe["ingredients"]:
+            ingredient_string += f"{ingredient['quantity'].replace(',', ';')} {ingredient['unit']} {ingredient['name'].replace(',', ';')}, "
+        ingredient_string = (ingredient_string).rstrip(", ")
+        nutri = get_nutrition(ingredient_string)
+
+        aggregated_recipe = {
+            "keyword": recipe['labels'],
+            "title": recipe['title'],
+            "ingredients": ingredient_string,
+            "servings": recipe['servings'],
+            "instructions": recipe['instructions'],
+            "nutrition": nutri
+        }
+
+        add_nutri_per_serv(aggregated_recipe)
+
+        existing_recipes.append(aggregated_recipe)
+
+        doc_id = str(uuid.uuid4())
+        
+        es.index(index="recipe_box_v2", body=aggregated_recipe, id=doc_id)
+
+        with open("final_recipes_v2_elastic_clean.ndjson", "w", encoding="utf-8") as out:
+            doc = {
+                "_index": "recipe_box_v2",
+                "_id": doc_id,
+                "_score": 1,
+                "_source": aggregated_recipe
+            }
+            out.write(json.dumps(doc) + "\n")
+
+        print(f"\nRecipe '{aggregated_recipe['title']}' have been appended to {output_file}")
+    else:
+        print(f"Recipe '{aggregated_recipe['title']}' already exists; skipping duplicate.")
+    # Write the combined list back to the JSON file
+    with open(output_file, "w") as outfile:
+        json.dump(existing_recipes, outfile, indent=2)
+
 @app.route('/recipe_box_v2/search', methods=['POST'])
 def search_recipes():
     try:
         data = request.get_json()
         query = data.get("query", "")
         filters = data.get("filters", [])  # Get the filters array
+        user_id = data.get("user_id")
 
         if not query:
             return jsonify({"error": "No search query provided"}), 400
@@ -90,11 +174,20 @@ def search_recipes():
         es_query = {
             "query": {
                 "bool": {
-                    "must": [{"match": {"title": query}}]
+                    "must": [
+                        {"match": {"title": query}}  # Ensure title matches the query
+                    ],
+                    "should": [
+                        {"match": {"keyword": "public"}}
+                    ],  # Initialize should array for optional conditions
+                    "minimum_should_match": 1  # At least one of the should conditions must match
                 }
             },
             "_source": True
         }
+
+        if user_id:  # Check if user_id is not None
+            es_query["query"]["bool"]["should"].append({"match": {"keyword": user_id}})  # Ensure keyword contains user_id
 
         if filters:
             es_query["query"]["bool"]["filter"] = []
@@ -129,11 +222,9 @@ def search_recipes():
         print("Error processing request:", e)
         return jsonify({"error": "An error occurred"}), 500
 
-
 @app.route('/pantry', methods=['POST'])
 def get_pantry():
     user_id = request.get_json().get("user_id")
-    print(user_id)
 
     if not user_id:
         return jsonify({"error": "No search user_id provided"}), 400
@@ -150,12 +241,31 @@ def get_pantry():
     try:
         results = es.search(index="pantry", body=es_query)
         pantry_list = results["hits"]['hits'][0]['_source']['items']
-        print(pantry_list)
     except Exception as e:
         print("Error querying Elasticsearch:", e)
         return jsonify({"error": "Elasticsearch Error"}), 400
 
     return jsonify({ "pantry": pantry_list }), 200
+
+@app.route('/add_recipe', methods=['POST'])
+def add_recipe():
+
+    data = request.get_json()
+    recipe = data.get("recipe")
+    user_id = data.get("user_id")
+
+    if not user_id:
+        return jsonify({"error": "No search user_id provided"}), 400
+
+    recipe['labels'].append(user_id)
+
+    try:  # Store updated list
+        process_new_recipe(recipe)
+        print(f"Successfully added: {recipe['title']}")
+        return jsonify({"Success": f"Successfully added {recipe['title']}"}), 200
+    except Exception as e:
+        print("Error querying Elasticsearch:", e)
+        return jsonify({"error": "Elasticsearch Error"}), 400
 
 @app.route('/add_item', methods=['POST'])
 def add_item():
@@ -224,7 +334,7 @@ def remove_item():
         
         # Update the pantry list in Elasticsearch
         es.index(index="pantry", id=results["hits"]['hits'][0]['_id'], document={"user_id": user_id, "items": pantry_list})
-        
+        print(f"Successfully removed: {name}")
     except Exception as e:
         print("Error querying Elasticsearch:", e)
         return jsonify({"error": "Elasticsearch Error"}), 400
@@ -239,8 +349,6 @@ def login():
     data = request.get_json()
     username = data.get("username")
     password = data.get("password")
-
-    print(username, password)
 
     if not username or not password:
         return jsonify({"error": "Username and password are required"}), 400
@@ -258,7 +366,6 @@ def login():
 
     try:
         results = es.search(index="users", body=es_query)
-        print(results["hits"]['hits'])
         if results["hits"]["total"].get("value", 0) > 0:
             user_id = results["hits"]["hits"][0]["_source"].get("user_id", None)
             response = jsonify({"message": "Login successful!", "user_id": user_id})
@@ -288,7 +395,6 @@ def get_random_recipes():
     except Exception as e:
         print("Error fetching random recipes:", e)
         return jsonify({"error": "An error occurred"}), 500
-
     
 @app.route('/signup', methods=['POST'])
 def signup():
@@ -346,8 +452,20 @@ def signup():
     except Exception as e:
         print("Error adding user to Elasticsearch:", e)
         return jsonify({"error": "Internal server error"}), 500
-
-
+        
+# Add this function to execute the shell script
+def run_elastic_dump():
+    try:
+        result = subprocess.run(['sh', '/app/ES_data/elasticdump.sh'], 
+                              capture_output=True,
+                              text=True,
+                              check=True)
+        return True
+    except subprocess.CalledProcessError as e:
+        print("Error running elastic dump:", e)
+        print("Error output:", e.stderr)
+        return False
+    
 def create_es_client():
     """Create an Elasticsearch client with retries."""
     es = Elasticsearch(ES_HOST, basic_auth=(ES_USER, ES_PASS))
@@ -359,10 +477,10 @@ def create_es_client():
             if es.ping():
                 print("This is server.py: Successfully connected to Elasticsearch!")
 
-                """if run_elastic_dump():
+                if run_elastic_dump():
                     print("Initial data load completed")
                 else:
-                    print("Warning: Initial data load failed")"""
+                    print("Warning: Initial data load failed")
 
                 return es
         except Exception as e:
@@ -371,6 +489,29 @@ def create_es_client():
     print("Failed to connect to Elasticsearch within 10 seconds.")
     return None  # Return None if connection fails
 
+def cleanup():
+    """Function to run cleanup tasks before exiting."""
+    print("Running cleanup script...")
+    try:
+        result = subprocess.run(['sh', '/ES_data/update_json.sh'], 
+                                capture_output=True,
+                                text=True,
+                                check=True)
+        print("Cleanup script executed successfully.")
+        with open('./test.txt', 'w') as file:
+            file.write("Output: " + result.stdout)
+    except subprocess.CalledProcessError as e:
+        print("Error running cleanup script:", e)
+        print("Error output:", e.stderr)
+
+def signal_handler(sig, frame):
+    """Handle termination signals."""
+    cleanup()
+    sys.exit(0)
+
+# Add SIGINT to the signal handling
+signal.signal(signal.SIGTERM, signal_handler)
+signal.signal(signal.SIGINT, signal_handler)  
 @app.route('/enhance_recipe', methods=['POST'])
 def enhance_recipe():
     try:
@@ -417,4 +558,5 @@ def enhance_recipe():
 es = create_es_client()
 
 if __name__ == '__main__':
+        
     app.run(debug=True, host='0.0.0.0', port=5001)

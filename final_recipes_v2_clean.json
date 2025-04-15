@@ -13174,5 +13174,46 @@
       "Sugar": 12.529999999999996,
       "Protein": 20.74833333333333
     }
+  },
+  {
+    "keyword": [
+      "Fish",
+      "Salmon",
+      "Asparagus",
+      "Simple",
+      "$2b$12$nLPDpL9ynDYzQZxp9uHATeX2ekVWDanKduMOwXW2oX/j1xHJfjyiK"
+    ],
+    "title": "Sheet Pan Salmon With Asparagus",
+    "ingredients": "4 tbsp unsalted butter, softened, 4 tsp capers, drained, 1  small lemon, zested and juiced, divided, 1 lbs asparagus, trimmed, 2 tbsp olive oil, 1 tsp kosher salt, divided, 4 6-ounce skin-on or skinless salmon filets",
+    "servings": "4",
+    "instructions": "Preheat the oven to 400\u00b0F.\nArrange a rack in the middle of the oven.\n\nMake the lemon caper butter:\nPlace the butter, capers, and lemon zest in a small bowl. Mash with a fork to combine.\n\nPrepare the asparagus:\nArrange the asparagus on a rimmed baking sheet. Drizzled with the olive oil, season with 1/2 teaspoon salt and several grinds of pepper, and toss to coat. Spread out in a single layer around the perimeter of the baking sheet, making room for the salmon in the center.\n\nPrepare the salmon:\nSeason the salmon filets all over with 1/2 teaspoon salt and several grinds of pepper. Place skin-side down (if you bought them with the skin on), spaced evenly apart, in the middle of the baking sheet, pushing the asparagus to the side if needed. \n\nDivide the lemon-caper butter among the filets, doing your best to spread it evenly. Don\u2019t worry too much since the butter will melt in the oven.\n\nRoast:\nRoast until the asparagus is crisp-tender and the salmon is just cooked through. An instant-read thermometer inserted into the thickest part of the salmon registers 120\u00b0F to 130\u00b0F for medium-rare, 10 to 15 minutes.\n\nDrizzle with lemon juice and serve:\nDrizzle lemon juice over the salmon and asparagus and garnish with a few more grinds of pepper before serving.",
+    "nutrition": {
+      "Calories": 2152.4,
+      "Total fat": 158.19,
+      "Saturated fat": 48.959999999999994,
+      "Trans fat": 0.0,
+      "Polyunsaturated fat": 0.0,
+      "Monounsaturated fat": 0.0,
+      "Cholesterol": 550.65,
+      "Sodium": 2012.5100000000002,
+      "Total carbs": 20.19,
+      "Fiber": 10.08,
+      "Sugar": 6.23,
+      "Protein": 162.04999999999998
+    },
+    "nutrition_per_serving": {
+      "Calories": 538.1,
+      "Total fat": 39.5475,
+      "Saturated fat": 12.239999999999998,
+      "Trans fat": 0.0,
+      "Polyunsaturated fat": 0.0,
+      "Monounsaturated fat": 0.0,
+      "Cholesterol": 137.6625,
+      "Sodium": 503.12750000000005,
+      "Total carbs": 5.0475,
+      "Fiber": 2.52,
+      "Sugar": 1.5575,
+      "Protein": 40.512499999999996
+    }
   }
 ]

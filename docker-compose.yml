@@ -29,6 +29,7 @@ services:
       - RECIPE_API_KEY=${RECIPE_API_KEY}  
     volumes:
       - .:/app
+      - es_data:/ES_data
     depends_on:
       - elasticsearch
     networks:

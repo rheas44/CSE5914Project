@@ -15,9 +15,12 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react';
+import { SearchIcon, HamburgerIcon, AddIcon, EditIcon, CheckIcon, DeleteIcon } from '@chakra-ui/icons';
+import { useUser } from "./UserContext";
 import { useState } from 'react';
 
 const RecipeSearch = ({ onSearch }) => {
+  const { user } = useUser();
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState([]);
   const [newFilter, setNewFilter] = useState({
@@ -73,6 +76,7 @@ const RecipeSearch = ({ onSearch }) => {
         body: JSON.stringify({
           query,
           filters,
+          "user_id": user.user_id
         }),
       });
 
